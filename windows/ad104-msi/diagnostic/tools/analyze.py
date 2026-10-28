@@ -110,6 +110,8 @@ def analyze(data, build_id, expected_profile='ad104-msi'):
             raise ValueError('Incomplete PROM bytes')
         if hashlib.sha256(bytes.fromhex(raw)).hexdigest()!=prom.get('sha256'):
             raise ValueError('PROM hash mismatch')
+        if not raw.startswith('55aa'):
+            raise ValueError('Physical PROM has no ROM signature')
     if result['register_snapshot_complete']:
         if attempts!=23 or snapshot.get('guard_passed') is not True or snapshot.get('pci_snapshot_unchanged') is not True:
             raise ValueError('Inconsistent completed snapshot')
@@ -121,6 +123,9 @@ def analyze(data, build_id, expected_profile='ad104-msi'):
             raise ValueError('Invalid register result')
         if snapshot.get('final_chip')!=samples[0]['value']:
             raise ValueError('Chip identity changed')
+        expected_chip='0x193000a1' if profile=='rtx4080s-msi' else '0x194000a1'
+        if samples[0]['value']!=expected_chip or any(s['value'].startswith('0xbadf') for s in samples):
+            raise ValueError('Completed register snapshot contains an unexpected chip or denied read')
     if not observed:
         return result
     index, target = exact[0]
@@ -133,6 +138,17 @@ def analyze(data, build_id, expected_profile='ad104-msi'):
         raise ValueError('Config header does not match the declared target identity')
     if config[11] != 3 or config[14] & 0x7f:
         raise ValueError('Target is not a type-0 display controller')
+    extended=data.get('config256')
+    if extended is not None:
+        extended=bytes.fromhex(extended)
+        if len(extended)!=256 or extended[:64]!=config:
+            raise ValueError('Extended PCI config does not match the identity snapshot')
+    if result['register_snapshot_complete'] or result['physical_prom_complete']:
+        expected_bar=0xdd000000 if profile=='rtx4080s-msi' else 0x80000000
+        if (config[8]!=0xa1 or int.from_bytes(config[4:6],'little')&6!=2
+                or int.from_bytes(config[16:20],'little')!=expected_bar
+                or result['location']!={'segment':0,'bus':1,'device':0,'function':0}):
+            raise ValueError('Completed MMIO capture contradicts the PCI read guards')
     digest = target.get('cached_efi_rom', {}).get('sha256')
     if digest is not None and not re.fullmatch('[0-9a-f]{64}', digest):
         raise ValueError('Malformed cached ROM digest')
@@ -149,7 +165,17 @@ def analyze(data, build_id, expected_profile='ad104-msi'):
     gops = data.get('gops', [])
     if not isinstance(gops, list) or len(gops) > 64 or data.get('gop_count') != len(gops):
         raise ValueError('Incomplete GOP list')
+    result['amd_integrated_gops']=0
+    result['console_on_target']=False
+    seen_paths=set()
     for gop in gops:
+        gop_path=gop.get('path',{})
+        path_hex=gop_path.get('hex')
+        if (gop.get('protocol_status')!='0x0000000000000000'
+                or gop_path.get('valid') is not True or gop_path.get('multi_instance') is not False
+                or not isinstance(path_hex,str) or not path_hex or path_hex in seen_paths):
+            result['topology_complete']=False
+        if isinstance(path_hex,str):seen_paths.add(path_hex)
         parent = gop.get('display_parent_index')
         if parent is None or gop.get('ambiguous_parent') is not False:
             result['topology_complete'] = False
@@ -157,8 +183,11 @@ def analyze(data, build_id, expected_profile='ad104-msi'):
             raise ValueError('Invalid GOP parent index')
         elif parent == index:
             result['target_gops'] += 1
+            result['console_on_target'] |= gop.get('same_handle_as_console_out') is True
         else:
             result['other_display_gops'] += 1
+            if displays[parent].get('vendor')=='0x1002' and displays[parent].get('device_id')=='0x164e':
+                result['amd_integrated_gops']+=1
     stable = {k: target.get(k) for k in ('vendor', 'device_id', 'subsystem_vendor', 'subsystem_device',
                                        'revision', 'location', 'path', 'bars', 'cached_efi_rom')}
     result['stable_fingerprint'] = json.dumps(stable, sort_keys=True)

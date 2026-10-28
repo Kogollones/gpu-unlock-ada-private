@@ -119,6 +119,36 @@ class ToolTests(unittest.TestCase):
         self.assertTrue(result['topology_complete'])
         self.assertFalse(result['unlock_ready'])
 
+    def test_completed_capture_cannot_contradict_hardware_guards(self):
+        original=json.loads((ROOT/'build/host-capture.json').read_text())
+        cases=[]
+        data=copy.deepcopy(original)
+        data['register_snapshot']['samples'][0]['value']='0x192000a1'
+        data['register_snapshot']['final_chip']='0x192000a1';cases.append(data)
+        data=copy.deepcopy(original);data['register_snapshot']['samples'][1]['value']='0xbadf0000';cases.append(data)
+        data=copy.deepcopy(original);data['config256']='00'*256;cases.append(data)
+        data=copy.deepcopy(original);data['display_devices'][0]['location']['bus']=2;cases.append(data)
+        for offset,value in ((4,7),(19,0x90),(8,0xa2)):
+            data=copy.deepcopy(original)
+            config=bytearray.fromhex(data['display_devices'][0]['config64']);config[offset]=value
+            data['display_devices'][0]['config64']=config.hex()
+            data['config256']=config.hex()+data['config256'][128:];cases.append(data)
+        for data in cases:
+            with self.subTest(case=cases.index(data)), self.assertRaises(ValueError):
+                analyze_capture(data,data['build_id'])
+
+    def test_amd_gop_routing_and_failed_or_duplicate_gops(self):
+        data=json.loads((ROOT/'build/host-capture-three-monitors.json').read_text())
+        data['display_devices'][1]['vendor']='0x1002'
+        data['display_devices'][1]['device_id']='0x164e'
+        result=analyze_capture(data,data['build_id'])
+        self.assertEqual(result['amd_integrated_gops'],1)
+        self.assertTrue(result['console_on_target'])
+        failed=copy.deepcopy(data);failed['gops'][0]['protocol_status']='0x8000000000000007'
+        self.assertFalse(analyze_capture(failed,data['build_id'])['topology_complete'])
+        data['gops'][2]['path']=copy.deepcopy(data['gops'][0]['path'])
+        self.assertFalse(analyze_capture(data,data['build_id'])['topology_complete'])
+
 
 if __name__=='__main__':
     unittest.main()

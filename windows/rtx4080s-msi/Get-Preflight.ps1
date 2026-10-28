@@ -27,6 +27,7 @@ $summary = [ordered]@{
     secure_boot_enabled=$secureBoot
     expected_diagnostic_profile='rtx4080s-msi'
     exact_windows_identity_observed=($targets.Count -eq 1)
+    exact_host_profile_observed=($targets.Count -eq 1 -and $board.Manufacturer -eq 'Micro-Star International Co., Ltd.' -and $board.Product -eq 'X870E GAMING PLUS WIFI (MS-7E70)' -and $bios.SMBIOSBIOSVersion -eq '1.A62' -and @($adapters | Where-Object { $_.pci -and $_.pci.vendor -eq '1002' -and $_.pci.device -eq '164E' }).Count -eq 1)
     preboot_capture_available=$false
     hardware_unlock_validated=$false
     unlock_attempted=$false

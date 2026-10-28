@@ -16,6 +16,12 @@ checks the PE and source access rules, and creates a new timestamped kit beneath
 the EFI, install a driver, copy to an ESP or USB, change security/boot settings,
 restart Windows, or run a GPU benchmark.
 
+Preparation now also requires the observed MSI X870E motherboard, BIOS 1.A62 and
+AMD `1002:164e` integrated adapter. A BIOS update or hardware change requires a
+profile review. Every new kit includes `port-readiness.json` with the remaining
+development work. Secure Boot enabled or unknown is reported as unresolved for
+the unsigned image; it does not prevent an offline build.
+
 The diagnostic profile requires `10de:2702 / 1462:5118`, revision A1, one unique
 matching GPU, PCI `0000:01:00.0`, memory decode enabled and bus mastering disabled,
 BAR0 `0xdd000000` with a matching 16 MiB firmware resource descriptor, and AD103
@@ -49,6 +55,20 @@ Analyze a later capture with the manifest from that exact kit:
 ```powershell
 python windows/ad104-msi/diagnostic/tools/analyze.py X:/RTX4080S-PROBE/CAP0001.JSON --manifest build/rtx4080s-msi/YOUR-KIT/manifest.json
 ```
+
+For a combined host and capture review, use:
+
+```powershell
+python windows/rtx4080s-msi/review.py --inventory build/rtx4080s-msi/YOUR-KIT/windows-inventory.json --capture X:/RTX4080S-PROBE/CAP0001.JSON --manifest build/rtx4080s-msi/YOUR-KIT/manifest.json
+```
+
+The review rejects contradictory PCI/register data and identifies AMD GOPs,
+NVIDIA console ownership, missing driver code and incomplete ownership graphs.
+GOP counts describe firmware output handles, which may differ from the number
+of plugged-in monitors. They do not authorize releasing a driver. Supply
+`--mock` when analyzing synthetic fixtures. A supplied capture is not independently
+authenticated; the report always leaves activation and hardware qualification
+false. Optional `--output NEW-FILE.json` refuses to overwrite an existing file.
 
 A capture must be reviewed for ROM/FWSEC inputs, memory geometry, BARs and the
 complete console/driver ownership graph before implementing the write-enabled

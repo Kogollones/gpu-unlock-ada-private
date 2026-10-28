@@ -6,6 +6,7 @@ $diagnostic = Join-Path $repoRoot 'windows\ad104-msi\diagnostic'
 $inventoryText = & (Join-Path $PSScriptRoot 'Get-Preflight.ps1')
 $inventory = ($inventoryText -join "`n") | ConvertFrom-Json
 if (!$inventory.exact_windows_identity_observed) { throw 'Expected one MSI 10de:2702 / 1462:5118 A1. No kit created.' }
+if (!$inventory.exact_host_profile_observed) { throw 'Motherboard, BIOS or AMD integrated GPU differs from the captured Windows inventory. Review the host profile before building a kit.' }
 $buildArguments = @{ Python=$Python; Profile='rtx4080s-msi' }
 if ($VcVars) { $buildArguments.VcVars=$VcVars }
 & (Join-Path $diagnostic 'Build.ps1') @buildArguments
@@ -25,6 +26,8 @@ Copy-Item -LiteralPath (Join-Path $diagnostic 'LICENSE.txt') -Destination (Join-
 Copy-Item -LiteralPath (Join-Path $diagnostic 'THIRD_PARTY.md') -Destination (Join-Path $kit 'THIRD_PARTY.md')
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'README.md') -Destination (Join-Path $kit 'README-FIRST.md')
 Set-Content -LiteralPath (Join-Path $kit 'windows-inventory.json') -Value $inventoryText -Encoding utf8
+& $Python (Join-Path $PSScriptRoot 'review.py') --inventory (Join-Path $kit 'windows-inventory.json') --output (Join-Path $kit 'port-readiness.json')
+if ($LASTEXITCODE -ne 0) { throw 'Port readiness report failed' }
 $checksums = [ordered]@{}
 Get-ChildItem -LiteralPath $kit -File -Recurse | Sort-Object FullName | ForEach-Object {
     $checksums[$_.FullName.Substring($kit.Length+1)] = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
