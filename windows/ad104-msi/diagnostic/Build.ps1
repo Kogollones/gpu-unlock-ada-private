@@ -1,6 +1,7 @@
 param(
     [string]$VcVars = 'C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat',
-    [string]$Python = 'python'
+    [string]$Python = 'python',
+    [ValidateSet('ad104-msi','rtx4080s-msi')][string]$Profile = 'ad104-msi'
 )
 $ErrorActionPreference = 'Stop'
 if (-not (Test-Path -LiteralPath $VcVars)) { throw "Missing MSVC setup: $VcVars" }
@@ -12,9 +13,18 @@ Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'src') -File | Sort-Object N
 $identityText = (($sourceHashes.GetEnumerator() | ForEach-Object { $_.Name + '=' + $_.Value }) -join "`n")
 $identityText += "`nheaders=" + (Get-FileHash -LiteralPath (Join-Path $PSScriptRoot '..\vendor\edk2\headers.json') -Algorithm SHA256).Hash
 $identityText += "`nbuild=" + (Get-FileHash -LiteralPath $PSCommandPath -Algorithm SHA256).Hash
+$identityText += "`nprofile=" + $Profile
 $hasher = [Security.Cryptography.SHA256]::Create()
 try { $buildId = [BitConverter]::ToString($hasher.ComputeHash([Text.Encoding]::UTF8.GetBytes($identityText))).Replace('-','').ToLowerInvariant() } finally { $hasher.Dispose() }
-Set-Content -LiteralPath (Join-Path $buildDir 'build_id.h') -Value ('#define PROBE_BUILD_ID "' + $buildId + '"') -Encoding ascii
+$defines = @('#define PROBE_BUILD_ID "' + $buildId + '"')
+$profileFlag = ''
+$binaryName = 'AD104-PROBE.EFI'
+if ($Profile -eq 'rtx4080s-msi') {
+    $defines += '#define PROBE_RTX4080S_MSI 1'
+    $profileFlag = '/DPROBE_RTX4080S_MSI'
+    $binaryName = 'RTX4080S-PROBE.EFI'
+}
+Set-Content -LiteralPath (Join-Path $buildDir 'build_id.h') -Value $defines -Encoding ascii
 $script = @'
 @echo off
 call "@VCVARS@" >nul
@@ -42,15 +52,21 @@ build\platform-tests.exe
 if errorlevel 1 exit /b 1
 '@
 $script = $script.Replace('@VCVARS@', $VcVars).Replace('@ROOT@', $PSScriptRoot)
+$script = $script.Replace('cl /nologo', ('cl /nologo ' + $profileFlag))
+$script = $script.Replace('build\AD104-PROBE.EFI', ('build\' + $binaryName))
 $cmdFile = Join-Path $buildDir 'compile.cmd'
 Set-Content -LiteralPath $cmdFile -Value $script -Encoding ascii
 & $env:ComSpec /d /c $cmdFile
 if ($LASTEXITCODE -ne 0) { throw 'Compiler or host test failure' }
-& $Python (Join-Path $PSScriptRoot 'tools\verify.py')
+& $Python (Join-Path $PSScriptRoot 'tools\verify.py') --binary (Join-Path $buildDir $binaryName)
 if ($LASTEXITCODE -ne 0) { throw 'PE/source verification failure' }
-& $Python -m unittest discover -s (Join-Path $PSScriptRoot 'tests') -p 'test_*.py' -v
-if ($LASTEXITCODE -ne 0) { throw 'Python verification test failure' }
-$binary = Join-Path $buildDir 'AD104-PROBE.EFI'
-$manifest = [ordered]@{ version='0.4.0'; build_id=$buildId; binary='AD104-PROBE.EFI'; sha256=(Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash.ToLowerInvariant(); source_sha256=$sourceHashes; hardware_tested=$false; gpu_write_capability=$false; mmio_read_capability=$true; validation='MSVC host mocks and PE checks'; utc=[DateTime]::UtcNow.ToString('o') }
+$previousTestBinary = $env:PROBE_TEST_BINARY
+try {
+    $env:PROBE_TEST_BINARY = Join-Path $buildDir $binaryName
+    & $Python -m unittest discover -s (Join-Path $PSScriptRoot 'tests') -p 'test_*.py' -v
+    if ($LASTEXITCODE -ne 0) { throw 'Python verification test failure' }
+} finally { $env:PROBE_TEST_BINARY = $previousTestBinary }
+$binary = Join-Path $buildDir $binaryName
+$manifest = [ordered]@{ version='0.4.0'; profile=$Profile; build_id=$buildId; binary=$binaryName; sha256=(Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash.ToLowerInvariant(); source_sha256=$sourceHashes; hardware_tested=$false; gpu_write_capability=$false; mmio_read_capability=$true; validation='MSVC host mocks and PE checks'; utc=[DateTime]::UtcNow.ToString('o') }
 $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $buildDir 'manifest.json') -Encoding utf8
 Write-Output $binary

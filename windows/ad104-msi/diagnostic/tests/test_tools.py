@@ -1,11 +1,13 @@
 import copy
 import importlib.util
 import json
+import os
 from pathlib import Path
 import struct
 import unittest
 
 ROOT=Path(__file__).resolve().parents[1]
+BINARY=Path(os.environ.get('PROBE_TEST_BINARY',ROOT/'build/AD104-PROBE.EFI'))
 
 
 def load(name):
@@ -17,14 +19,19 @@ def load(name):
 
 verify=load('verify')
 analyze=load('analyze')
+EXPECTED_PROFILE=json.loads((ROOT/'build/host-capture.json').read_text()).get('diagnostic_profile','ad104-msi')
+
+
+def analyze_capture(data, build_id):
+    return analyze.analyze(data, build_id, EXPECTED_PROFILE)
 
 
 class ToolTests(unittest.TestCase):
     def test_pe_accepts_built_image(self):
-        verify.validate_pe((ROOT/'build/AD104-PROBE.EFI').read_bytes())
+        verify.validate_pe(BINARY.read_bytes())
 
     def test_pe_rejects_mutations(self):
-        original=(ROOT/'build/AD104-PROBE.EFI').read_bytes()
+        original=BINARY.read_bytes()
         pe=struct.unpack_from('<I',original,0x3c)[0]
         opt=pe+24
         cases=[(0,b'ZZ'),(pe+4,struct.pack('<H',0x14c)),
@@ -49,7 +56,7 @@ class ToolTests(unittest.TestCase):
 
     def test_capture_accepts_mock_as_inventory_only(self):
         data=json.loads((ROOT/'build/host-capture.json').read_text())
-        result=analyze.analyze(data,data['build_id'])
+        result=analyze_capture(data,data['build_id'])
         self.assertTrue(result['identity_observed'])
         self.assertEqual(result['target_gops'],1)
         self.assertFalse(result['unlock_ready'])
@@ -62,38 +69,55 @@ class ToolTests(unittest.TestCase):
     def test_capture_rejects_mutations(self):
         data=json.loads((ROOT/'build/host-capture.json').read_text())
         with self.assertRaises(ValueError):
-            analyze.analyze(data,'incorrect-build')
+            analyze_capture(data,'incorrect-build')
         for field in ('gpu_writes','unlock_attempted','hardware_support_validated'):
             changed=copy.deepcopy(data);changed[field]=True
             with self.subTest(field=field),self.assertRaises(ValueError):
-                analyze.analyze(changed,data['build_id'])
+                analyze_capture(changed,data['build_id'])
         changed=copy.deepcopy(data);changed['target_id_count']=2
         with self.assertRaises(ValueError):
-            analyze.analyze(changed,data['build_id'])
+            analyze_capture(changed,data['build_id'])
 
         changed=copy.deepcopy(data);changed['display_devices'][0]['config64']='00'*64
         with self.assertRaises(ValueError):
-            analyze.analyze(changed,data['build_id'])
+            analyze_capture(changed,data['build_id'])
         changed=copy.deepcopy(data);changed['cached_rom_hex']='00'+changed['cached_rom_hex'][2:]
         with self.assertRaises(ValueError):
-            analyze.analyze(changed,data['build_id'])
+            analyze_capture(changed,data['build_id'])
         changed=copy.deepcopy(data);changed['register_snapshot']['read_attempts']=999
         with self.assertRaises(ValueError):
-            analyze.analyze(changed,data['build_id'])
+            analyze_capture(changed,data['build_id'])
         changed=copy.deepcopy(data);changed['physical_prom']['hex']='00'+changed['physical_prom']['hex'][2:]
         with self.assertRaises(ValueError):
-            analyze.analyze(changed,data['build_id'])
+            analyze_capture(changed,data['build_id'])
     def test_driver_code_hash(self):
         import hashlib
         data=json.loads((ROOT/'build/host-capture.json').read_text())
         data['platform']={'available':True,'handles':[], 'handle_count':0,'edge_count':0,
                          'gpu_agents':[{'code':{'length':1,'hex':'00','loaded_sha256':hashlib.sha256(b'\0').hexdigest()}}],
                          'complete':False,'atomic_snapshot':False,'release_authorized':False}
-        self.assertEqual(analyze.analyze(data,data['build_id'])['driver_code_captures_verified'],1)
+        self.assertEqual(analyze_capture(data,data['build_id'])['driver_code_captures_verified'],1)
         data['platform']['gpu_agents'][0]['code']['hex']='01'
         with self.assertRaises(ValueError):
-            analyze.analyze(data,data['build_id'])
+            analyze_capture(data,data['build_id'])
 
+    def test_profiles_cannot_be_substituted(self):
+        data=json.loads((ROOT/'build/host-capture.json').read_text())
+        other='ad104-msi' if EXPECTED_PROFILE == 'rtx4080s-msi' else 'rtx4080s-msi'
+        for profile in ('unknown-profile', other):
+            with self.subTest(profile=profile), self.assertRaises(ValueError):
+                analyze.analyze(data,data['build_id'],profile)
+        changed=copy.deepcopy(data);changed['diagnostic_profile']='unknown-profile'
+        with self.assertRaises(ValueError):
+            analyze_capture(changed,data['build_id'])
+
+    def test_two_target_monitors_and_one_integrated_monitor(self):
+        data=json.loads((ROOT/'build/host-capture-three-monitors.json').read_text())
+        result=analyze_capture(data,data['build_id'])
+        self.assertEqual(result['target_gops'],2)
+        self.assertEqual(result['other_display_gops'],1)
+        self.assertTrue(result['topology_complete'])
+        self.assertFalse(result['unlock_ready'])
 
 
 if __name__=='__main__':

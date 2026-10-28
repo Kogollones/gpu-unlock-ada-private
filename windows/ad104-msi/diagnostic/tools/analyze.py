@@ -6,7 +6,17 @@ import hashlib
 from pathlib import Path
 
 
-def analyze(data, build_id):
+PROFILES = {
+    'ad104-msi': ('0x2782', '0x5132', bytes.fromhex('de108227'), bytes.fromhex('62143251'), 150016, 150016),
+    'rtx4080s-msi': ('0x2702', '0x5118', bytes.fromhex('de100227'), bytes.fromhex('62141851'), 512, 512*1024),
+}
+
+
+def analyze(data, build_id, expected_profile='ad104-msi'):
+    profile=data.get('diagnostic_profile','ad104-msi')
+    if profile not in PROFILES or profile != expected_profile:
+        raise ValueError('Capture diagnostic profile does not match the selected profile')
+    device,subsystem,config_id,config_subsystem,cached_min,cached_max=PROFILES[profile]
     if data.get('schema') != 4 or data.get('probe_version') != '0.4.0':
         raise ValueError('Unsupported capture schema/version')
     if data.get('build_id') != build_id:
@@ -18,9 +28,9 @@ def analyze(data, build_id):
     if not isinstance(displays, list) or len(displays) > 32:
         raise ValueError('Malformed display inventory')
     targets = [(i, d) for i, d in enumerate(displays)
-               if d.get('vendor') == '0x10de' and d.get('device_id') == '0x2782']
+               if d.get('vendor') == '0x10de' and d.get('device_id') == device]
     exact = [(i, d) for i, d in targets
-             if d.get('subsystem_vendor') == '0x1462' and d.get('subsystem_device') == '0x5132'
+             if d.get('subsystem_vendor') == '0x1462' and d.get('subsystem_device') == subsystem
              and d.get('exact_expected_identity') is True]
     observed = len(targets) == len(exact) == 1 and data.get('pci_enumeration_complete') is True
     if data.get('target_id_count') != len(targets) or data.get('exact_identity_count') != len(exact):
@@ -119,7 +129,7 @@ def analyze(data, build_id):
         raise ValueError('Target location or device path is incomplete')
     result['location'] = target['location']
     config = bytes.fromhex(target.get('config64', ''))
-    if len(config) != 64 or config[:4] != bytes.fromhex('de108227') or config[44:48] != bytes.fromhex('62143251'):
+    if len(config) != 64 or config[:4] != config_id or config[44:48] != config_subsystem:
         raise ValueError('Config header does not match the declared target identity')
     if config[11] != 3 or config[14] & 0x7f:
         raise ValueError('Target is not a type-0 display controller')
@@ -129,9 +139,11 @@ def analyze(data, build_id):
     result['rom_sha256'] = digest
     cached_hex=data.get('cached_rom_hex')
     if cached_hex is not None:
-        if not isinstance(cached_hex,str) or len(cached_hex)!=150016*2:
+        if not isinstance(cached_hex,str) or len(cached_hex)%2 or not cached_min*2<=len(cached_hex)<=cached_max*2:
             raise ValueError('Unexpected cached ROM size')
         cached=bytes.fromhex(cached_hex)
+        if len(cached) != target.get('cached_efi_rom',{}).get('size'):
+            raise ValueError('Cached ROM size does not match the inventory')
         if hashlib.sha256(cached).hexdigest()!=digest:
             raise ValueError('Cached ROM hash mismatch')
     gops = data.get('gops', [])
@@ -167,7 +179,7 @@ def main():
         if path.stat().st_size > 8 * 1024 * 1024:
             parser.error('Capture exceeds the firmware report limit')
         try:
-            result = analyze(json.loads(path.read_text(encoding='utf-8-sig')), manifest['build_id'])
+            result = analyze(json.loads(path.read_text(encoding='utf-8-sig')), manifest['build_id'], manifest.get('profile','ad104-msi'))
         except (ValueError, KeyError, TypeError) as e:
             parser.error(str(path)+': '+str(e))
         rows.append(result)

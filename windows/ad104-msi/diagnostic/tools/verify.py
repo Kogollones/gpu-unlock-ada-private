@@ -1,5 +1,6 @@
 """Reject an unsuitable PE or an unexpected hardware-access call in probe sources."""
 from pathlib import Path
+import argparse
 import json
 import re
 import struct
@@ -46,7 +47,10 @@ def validate_source(src):
 
 def main():
     root=Path(__file__).resolve().parents[1]
-    validate_pe((root/'build/AD104-PROBE.EFI').read_bytes())
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--binary',type=Path,default=root/'build/AD104-PROBE.EFI')
+    args=parser.parse_args()
+    validate_pe(args.binary.read_bytes())
     validate_source((root/'src/probe.c').read_text())
     validate_source((root/'src/platform.c').read_text())
     sample=(root/'src/sample.c').read_text()

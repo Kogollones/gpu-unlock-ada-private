@@ -10,10 +10,11 @@ static unsigned Checks;
 static UINT8 TargetPath[]={1,1,6,0,0,1,0x7f,0xff,4,0};
 static UINT8 IntelPath[]={1,1,6,0,0,2,0x7f,0xff,4,0};
 static UINT8 TargetGopPath[]={1,1,6,0,0,1,2,3,8,0,0,0,0,0,0x7f,0xff,4,0};
+static UINT8 TargetGopPathSecond[]={1,1,6,0,0,1,2,3,8,0,1,0,0,0,0x7f,0xff,4,0};
 static UINT8 IntelGopPath[]={1,1,6,0,0,2,2,3,8,0,0,0,0,0,0x7f,0xff,4,0};
 static UINT8 UsbVolumePath[]={3,5,6,0,0,0,0x7f,0xff,4,0};
 static EFI_PCI_IO_PROTOCOL MockPci[2];
-static EFI_GRAPHICS_OUTPUT_PROTOCOL MockGop[2];
+static EFI_GRAPHICS_OUTPUT_PROTOCOL MockGop[3];
 static EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE GopMode;
 static EFI_GRAPHICS_OUTPUT_MODE_INFORMATION GopInfo;
 static EFI_BOOT_SERVICES Bs;
@@ -24,7 +25,7 @@ static EFI_SIMPLE_FILE_SYSTEM_PROTOCOL Fs;
 static EFI_FILE_PROTOCOL Root,Directory,Log,Existing;
 static UINT8 Config[2][256],Rom[150016];
 static UINT32 MockProm[0x100000/4];
-static BOOLEAN FailProm;
+static BOOLEAN FailProm,WrongChip;
 static EFI_HANDLE Image=(EFI_HANDLE)(UINTN)100,Volume=(EFI_HANDLE)(UINTN)101;
 static unsigned Scenario,ConfigReads,BarReads,FileWrites,ExistingOpens,RootCloses,DirCloses,LogCloses;
 static char Written[sizeof(Report)];
@@ -51,7 +52,7 @@ static EFI_STATUS EFIAPI MemoryRead(EFI_PCI_IO_PROTOCOL *self,EFI_PCI_IO_PROTOCO
     CHECK(found);MemoryReads++;
     if(FailMemory&&MemoryReads==2) return EFI_DEVICE_ERROR;
     if(ChangeIdentity&&MemoryReads==1) Config[0][8]^=1;
-    *(UINT32 *)out=offset==0?0x194000a1u:0;
+    *(UINT32 *)out=offset==0?(WrongChip?0x192000a1u:PROBE_CHIP_ID):0;
     return EFI_SUCCESS;
 }
 static EFI_STATUS EFIAPI Location(EFI_PCI_IO_PROTOCOL *self,UINTN *seg,UINTN *bus,UINTN *dev,UINTN *fun) {
@@ -60,8 +61,8 @@ static EFI_STATUS EFIAPI Location(EFI_PCI_IO_PROTOCOL *self,UINTN *seg,UINTN *bu
 }
 static EFI_STATUS EFIAPI Bar(EFI_PCI_IO_PROTOCOL *self,UINT8 index,UINT64 *supports,VOID **resources) {
     UINT8 *p; (void)self;CHECK(index<6);BarReads++;*supports=0;
-    p=calloc(1,46);CHECK(p!=NULL);p[0]=0x8a;p[1]=43;p[3]=0;p[17]=0x80;p[41]=1;
-    p[22]=0xff;p[23]=0xff;p[24]=0xff;p[25]=0x80;
+    p=calloc(1,46);CHECK(p!=NULL);p[0]=0x8a;p[1]=43;p[3]=0;p[17]=(UINT8)(PROBE_BAR0>>24);p[41]=1;
+    p[22]=0xff;p[23]=0xff;p[24]=0xff;p[25]=(UINT8)(PROBE_BAR0>>24);
     if(CorruptResource) p[3]=1;
     *resources=p;return EFI_SUCCESS;
 }
@@ -76,8 +77,10 @@ static EFI_STATUS EFIAPI Locate(EFI_LOCATE_SEARCH_TYPE kind,EFI_GUID *guid,VOID 
     }
     CHECK(BytesEqual(guid,&GopGuid,16));
     if(Scenario==7) {*count=0;*handles=NULL;return EFI_NOT_FOUND;}
-    *count=2;*handles=malloc(2*sizeof(EFI_HANDLE));CHECK(*handles!=NULL);
-    (*handles)[0]=(EFI_HANDLE)(UINTN)3;(*handles)[1]=(EFI_HANDLE)(UINTN)4;return EFI_SUCCESS;
+    *count=Scenario==8?3:2;*handles=malloc(*count*sizeof(EFI_HANDLE));CHECK(*handles!=NULL);
+    (*handles)[0]=(EFI_HANDLE)(UINTN)3;(*handles)[1]=(EFI_HANDLE)(UINTN)4;
+    if(Scenario==8) (*handles)[2]=(EFI_HANDLE)(UINTN)5;
+    return EFI_SUCCESS;
 }
 static EFI_STATUS EFIAPI Handle(EFI_HANDLE h,EFI_GUID *guid,VOID **out) {
     UINTN id=(UINTN)h;
@@ -86,10 +89,11 @@ static EFI_STATUS EFIAPI Handle(EFI_HANDLE h,EFI_GUID *guid,VOID **out) {
     if(BytesEqual(guid,&PciGuid,16)&&id>=1&&id<=2) {*out=&MockPci[id-1];return EFI_SUCCESS;}
     if(BytesEqual(guid,&DpGuid,16)) {
         switch(id) {case 1:*out=TargetPath;return EFI_SUCCESS;case 2:*out=IntelPath;return EFI_SUCCESS;
-        case 3:*out=TargetGopPath;return EFI_SUCCESS;case 4:*out=IntelGopPath;return EFI_SUCCESS;}
+        case 3:*out=TargetGopPath;return EFI_SUCCESS;case 4:*out=IntelGopPath;return EFI_SUCCESS;
+        case 5:*out=TargetGopPathSecond;return EFI_SUCCESS;}
         if(h==Volume) {*out=NonUsb?IntelPath:UsbVolumePath;return EFI_SUCCESS;}
     }
-    if(BytesEqual(guid,&GopGuid,16)&&id>=3&&id<=4) {*out=&MockGop[id-3];return EFI_SUCCESS;}
+    if(BytesEqual(guid,&GopGuid,16)&&id>=3&&id<=5) {*out=&MockGop[id-3];return EFI_SUCCESS;}
     return EFI_UNSUPPORTED;
 }
 static EFI_STATUS EFIAPI PoolFree(VOID *p) {free(p);return EFI_SUCCESS;}
@@ -105,7 +109,7 @@ static EFI_STATUS EFIAPI CloseFile(EFI_FILE_PROTOCOL *self) {
     return EFI_SUCCESS;
 }
 static EFI_STATUS EFIAPI OpenFile(EFI_FILE_PROTOCOL *self,EFI_FILE_PROTOCOL **out,CHAR16 *name,UINT64 mode,UINT64 attr) {
-    if(self==&Root) {CHECK(name[0]==L'A'&&attr==EFI_FILE_DIRECTORY);*out=&Directory;return EFI_SUCCESS;}
+    if(self==&Root) {CHECK(BytesEqual(name,PROBE_DIRECTORY,sizeof(PROBE_DIRECTORY))&&attr==EFI_FILE_DIRECTORY);*out=&Directory;return EFI_SUCCESS;}
     CHECK(self==&Directory&&name[0]==L'C');
     if(mode==EFI_FILE_MODE_READ) {
         ExistingOpens++;
@@ -132,14 +136,15 @@ static void Setup(unsigned scenario) {
     memset(Config,0,sizeof(Config));memset(&Root,0,sizeof(Root));memset(&Directory,0,sizeof(Directory));memset(&Log,0,sizeof(Log));memset(&Existing,0,sizeof(Existing));
     memset(Rom,0,sizeof(Rom));memset(Written,0,sizeof(Written));memset(Displays,0,sizeof(Displays));
     Rom[0]=0x55;Rom[1]=0xaa;Rom[0x18]=0x40;memcpy(Rom+0x40,"PCIR",4);
-    Rom[0x44]=0xde;Rom[0x45]=0x10;Rom[0x46]=0x82;Rom[0x47]=0x27;Rom[0x4a]=0x18;Rom[0x50]=1;Rom[0x55]=0x80;
-    Config[0][0]=0xde;Config[0][1]=0x10;Config[0][2]=0x82;Config[0][3]=0x27;
-    Config[0][11]=3;Config[0][44]=0x62;Config[0][45]=0x14;Config[0][46]=0x32;Config[0][47]=0x51;
-    Config[0][4]=3;Config[0][8]=0xa1;Config[0][16]=0;Config[0][19]=0x80;
+    Rom[0x44]=0xde;Rom[0x45]=0x10;Rom[0x46]=(UINT8)(PROBE_DEVICE_ID&0xff);Rom[0x47]=(UINT8)(PROBE_DEVICE_ID>>8);Rom[0x4a]=0x18;Rom[0x50]=1;Rom[0x55]=0x80;
+    Config[0][0]=0xde;Config[0][1]=0x10;Config[0][2]=(UINT8)(PROBE_DEVICE_ID&0xff);Config[0][3]=(UINT8)(PROBE_DEVICE_ID>>8);
+    Config[0][11]=3;Config[0][44]=0x62;Config[0][45]=0x14;Config[0][46]=(UINT8)(PROBE_SUBSYSTEM_ID&0xff);Config[0][47]=(UINT8)(PROBE_SUBSYSTEM_ID>>8);
+    Config[0][4]=3;Config[0][8]=0xa1;Config[0][16]=0;Config[0][19]=(UINT8)(PROBE_BAR0>>24);
     Config[1][0]=0x86;Config[1][1]=0x80;Config[1][2]=1;Config[1][11]=3;
     if(scenario==1) Config[0][46]^=1;
     if(scenario==3) Config[0][2]=0x05,Config[0][3]=0x27;
     for(i=0;i<2;i++) {MockPci[i].Pci.Read=ConfigRead;MockPci[i].GetLocation=Location;MockPci[i].GetBarAttributes=Bar;MockGop[i].Mode=&GopMode;}
+    MockGop[2].Mode=&GopMode;
     MockPci[0].RomImage=Rom;MockPci[0].RomSize=sizeof(Rom);
     MockPci[0].Mem.Read=MemoryRead;
     GopMode.Info=&GopInfo;GopMode.SizeOfInfo=sizeof(GopInfo);GopInfo.HorizontalResolution=1920;GopInfo.VerticalResolution=1080;
@@ -151,7 +156,7 @@ static void Setup(unsigned scenario) {
     Scenario=scenario;ConfigReads=BarReads=FileWrites=ExistingOpens=RootCloses=DirCloses=LogCloses=0;
     FailedConfig=FailedLocation=FailedLog=ShortWrite=FailedFlush=ExistingFirst=NonUsb=FALSE;
     MemoryReads=0;FailMemory=CorruptResource=ChangeIdentity=FALSE;
-    memset(MockProm,0,sizeof(MockProm));MockProm[0]=0xaa55;FailProm=FALSE;
+    memset(MockProm,0,sizeof(MockProm));MockProm[0]=0xaa55;FailProm=WrongChip=FALSE;
 }
 static void TestCore(void) {
     UINT8 digest[32],bad[64],million[1000];CHAR8 buf[67];TEXT t;UINTN n;BOOLEAN multi;unsigned i;
@@ -173,13 +178,14 @@ static void TestCore(void) {
     memcpy(bad,TargetPath,sizeof(TargetPath));bad[7]=1;memcpy(bad+10,TargetPath,sizeof(TargetPath));
     CHECK(DpMeasure(bad,20,&n,&multi)&&multi);CHECK(!DpParent(bad,20,TargetGopPath,sizeof(TargetGopPath)));
     Setup(0);CHECK(ExactTarget(Config[0],64));CHECK(!ExactTarget(Config[0],63));Config[0][14]=1;CHECK(!ExactTarget(Config[0],64));
-    CHECK(RomPcirValid(Rom,512,0x10de,0x2782));Rom[0x50]=0;CHECK(!RomPcirValid(Rom,512,0x10de,0x2782));
-    Rom[0x50]=1;Rom[0x55]=0;CHECK(!RomPcirValid(Rom,512,0x10de,0x2782));
-    Rom[0x55]=0x80;Rom[0x18]=0xff;Rom[0x19]=0xff;CHECK(!RomPcirValid(Rom,512,0x10de,0x2782));
+    CHECK(RomPcirValid(Rom,512,0x10de,PROBE_DEVICE_ID));Rom[0x50]=0;CHECK(!RomPcirValid(Rom,512,0x10de,PROBE_DEVICE_ID));
+    Rom[0x50]=1;Rom[0x55]=0;CHECK(!RomPcirValid(Rom,512,0x10de,PROBE_DEVICE_ID));
+    Rom[0x55]=0x80;Rom[0x18]=0xff;Rom[0x19]=0xff;CHECK(!RomPcirValid(Rom,512,0x10de,PROBE_DEVICE_ID));
+    Setup(0);Config[0][2]^=0x80;CHECK(!ExactTarget(Config[0],64));
 }
 static void TestApplication(void) {
     unsigned scenario;
-    for(scenario=0;scenario<=7;scenario++) {
+    for(scenario=0;scenario<=8;scenario++) {
         Setup(scenario);CHECK(UefiMain(Image,&St)==EFI_SUCCESS);CHECK(FileWrites==1&&RootCloses==1&&DirCloses==1&&LogCloses==1);
         CHECK(strstr(Written,"\"gpu_writes\":false")&&strstr(Written,"\"unlock_attempted\":false"));
         if(scenario==0) {
@@ -189,6 +195,12 @@ static void TestApplication(void) {
             {FILE *f=fopen("build/host-capture.json","wb");CHECK(f!=NULL);CHECK(fwrite(Written,1,strlen(Written),f)==strlen(Written));CHECK(fclose(f)==0);}
         }
         if(scenario==1||scenario==2||scenario==3||scenario==6) CHECK(strstr(Written,"\"unique_expected_identity_observed\":false"));
+        if(scenario==8) {
+            const char *first=strstr(Written,"\"display_parent_index\":0");
+            CHECK(first&&strstr(first+1,"\"display_parent_index\":0"));
+            CHECK(strstr(Written,"\"gop_count\":3"));
+            {FILE *f=fopen("build/host-capture-three-monitors.json","wb");CHECK(f!=NULL);CHECK(fwrite(Written,1,strlen(Written),f)==strlen(Written));CHECK(fclose(f)==0);}
+        }
     }
     Setup(0);FailedConfig=TRUE;CHECK(UefiMain(Image,&St)==EFI_SUCCESS);CHECK(strstr(Written,"\"pci_enumeration_complete\":false"));
     Setup(0);FailedLocation=TRUE;CHECK(UefiMain(Image,&St)==EFI_SUCCESS);CHECK(strstr(Written,"\"unique_expected_identity_observed\":false"));
@@ -221,6 +233,8 @@ static void TestSampler(void) {
     CHECK(SampleRegisters(&t,&MockPci[0],&Bs)==22&&MemoryReads==22&&strstr(buffer,"\"pci_snapshot_unchanged\":false"));
     Setup(0);Config[0][8]=0xa2;TextInit(&t,buffer,sizeof(buffer));
     CHECK(SampleRegisters(&t,&MockPci[0],&Bs)==0&&MemoryReads==0);
+    Setup(0);WrongChip=TRUE;TextInit(&t,buffer,sizeof(buffer));
+    CHECK(SampleRegisters(&t,&MockPci[0],&Bs)==1&&MemoryReads==1&&strstr(buffer,"\"complete\":false"));
 }
 static void TestProm(void) {
     static CHAR8 buffer[3*1024*1024];TEXT t;

@@ -1,3 +1,13 @@
+# Private Windows development copy
+
+This repository keeps independent Windows development for an MSI RTX 4080 SUPER
+(`10de:2702 / 1462:5118`) and an MSI X870E host. It is not an upstream contribution.
+The current addition is a diagnostic-only UEFI profile and local preparation kit;
+no unlock or performance gain has been validated on this system. See
+[Windows preparation and status](windows/rtx4080s-msi/README.md).
+
+Original project history, source, licences and credits are retained below.
+
 # GPU unlock 1.1.1 — RTX 4090 and experimental Ada GPUs
 
 New to this project? Start with the [copy-paste Quick Start](QUICKSTART.md).
