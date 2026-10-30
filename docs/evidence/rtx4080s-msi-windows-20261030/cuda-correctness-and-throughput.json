@@ -1,0 +1,234 @@
+{
+  "schema": 1,
+  "label": "post-usb-unlock-20261030-unmatched",
+  "utc": "2026-10-30T20:24:23.083917+00:00",
+  "python": "3.12.14",
+  "torch": "2.8.0+cu128",
+  "torch_cuda": "12.8",
+  "gpu": "NVIDIA GeForce RTX 4080 SUPER",
+  "capability": [
+    8,
+    9
+  ],
+  "cublas_version": 120804,
+  "cublas_sha256": "9513540e4ec4c51ee9e7304138c2cc255c29a8c181f9e80c38efa25738becd99",
+  "cublasLt_sha256": "b199d1ff892a81b7fd3d57ba1781549609b41500b36008fef326038393ad46c7",
+  "benchmark_sha256": "605b6d4e952689270fd825e764ec74d664bd7362bf91a41ddff5e6e866e82a70",
+  "math_mode": 16,
+  "seed": 20261024,
+  "warmup_seconds": 0.25,
+  "note": "cuBLAS GEMM throughput, not register-resident instruction rate or proof of unlock",
+  "initial_telemetry": {
+    "fields": [
+      "name",
+      "pci.bus_id",
+      "pci.device_id",
+      "driver_version",
+      "vbios_version",
+      "power.limit",
+      "power.draw",
+      "temperature.gpu",
+      "clocks.sm",
+      "clocks.mem",
+      "utilization.gpu",
+      "memory.used"
+    ],
+    "csv": "NVIDIA GeForce RTX 4080 SUPER, 00000000:01:00.0, 0x270210DE, 616.56, 95.03.44.00.6a, 320.00, 20.89, 40, 2580, 11251, 8, 8693",
+    "returncode": 0,
+    "error": ""
+  },
+  "results": [
+    {
+      "full_256_exact": true,
+      "full_256_max_abs_error": 0.0,
+      "mode": "fp32_pedantic",
+      "n": 4096,
+      "samples": 5,
+      "batch": 3,
+      "milliseconds": [
+        3.815082550048828,
+        3.6877654393514,
+        3.6618239084879556,
+        3.816447893778483,
+        3.8747199376424155
+      ],
+      "median_ms": 3.815082550048828,
+      "median_tflops": 36.025158477957696,
+      "min_ms": 3.6618239084879556,
+      "max_ms": 3.8747199376424155,
+      "compute_type": 69,
+      "input_type": 0,
+      "output_type": "FP32",
+      "sampled_large_exact": true,
+      "sampled_large_elements": 1024,
+      "sampled_large_max_abs_error": 0.0,
+      "output_sha256": "0e3b4c1a854bc95d06fb91f688b1f4f739fe7e76972c889fa1bbeb042ac7c1bc",
+      "telemetry_before": {
+        "fields": [
+          "name",
+          "pci.bus_id",
+          "pci.device_id",
+          "driver_version",
+          "vbios_version",
+          "power.limit",
+          "power.draw",
+          "temperature.gpu",
+          "clocks.sm",
+          "clocks.mem",
+          "utilization.gpu",
+          "memory.used"
+        ],
+        "csv": "NVIDIA GeForce RTX 4080 SUPER, 00000000:01:00.0, 0x270210DE, 616.56, 95.03.44.00.6a, 320.00, 33.28, 40, 2580, 11251, 6, 8894",
+        "returncode": 0,
+        "error": ""
+      },
+      "telemetry_after": {
+        "fields": [
+          "name",
+          "pci.bus_id",
+          "pci.device_id",
+          "driver_version",
+          "vbios_version",
+          "power.limit",
+          "power.draw",
+          "temperature.gpu",
+          "clocks.sm",
+          "clocks.mem",
+          "utilization.gpu",
+          "memory.used"
+        ],
+        "csv": "NVIDIA GeForce RTX 4080 SUPER, 00000000:01:00.0, 0x270210DE, 616.56, 95.03.44.00.6a, 320.00, 33.28, 40, 2580, 11251, 6, 8896",
+        "returncode": 0,
+        "error": ""
+      }
+    },
+    {
+      "full_256_exact": true,
+      "full_256_max_abs_error": 0.0,
+      "mode": "fp16_fp32",
+      "n": 4096,
+      "samples": 5,
+      "batch": 3,
+      "milliseconds": [
+        0.725056012471517,
+        0.908618688583374,
+        0.7372799714406332,
+        0.7369386355082194,
+        0.905898650487264
+      ],
+      "median_ms": 0.7372799714406332,
+      "median_tflops": 186.4135183320476,
+      "min_ms": 0.725056012471517,
+      "max_ms": 0.908618688583374,
+      "compute_type": 68,
+      "input_type": 2,
+      "output_type": "FP32",
+      "sampled_large_exact": true,
+      "sampled_large_elements": 1024,
+      "sampled_large_max_abs_error": 0.0,
+      "output_sha256": "0e3b4c1a854bc95d06fb91f688b1f4f739fe7e76972c889fa1bbeb042ac7c1bc",
+      "telemetry_before": {
+        "fields": [
+          "name",
+          "pci.bus_id",
+          "pci.device_id",
+          "driver_version",
+          "vbios_version",
+          "power.limit",
+          "power.draw",
+          "temperature.gpu",
+          "clocks.sm",
+          "clocks.mem",
+          "utilization.gpu",
+          "memory.used"
+        ],
+        "csv": "NVIDIA GeForce RTX 4080 SUPER, 00000000:01:00.0, 0x270210DE, 616.56, 95.03.44.00.6a, 320.00, 117.92, 43, 2745, 11251, 29, 9056",
+        "returncode": 0,
+        "error": ""
+      },
+      "telemetry_after": {
+        "fields": [
+          "name",
+          "pci.bus_id",
+          "pci.device_id",
+          "driver_version",
+          "vbios_version",
+          "power.limit",
+          "power.draw",
+          "temperature.gpu",
+          "clocks.sm",
+          "clocks.mem",
+          "utilization.gpu",
+          "memory.used"
+        ],
+        "csv": "NVIDIA GeForce RTX 4080 SUPER, 00000000:01:00.0, 0x270210DE, 616.56, 95.03.44.00.6a, 320.00, 117.92, 43, 2745, 11251, 29, 9056",
+        "returncode": 0,
+        "error": ""
+      }
+    },
+    {
+      "full_256_exact": true,
+      "full_256_max_abs_error": 0.0,
+      "mode": "bf16_fp32",
+      "n": 4096,
+      "samples": 5,
+      "batch": 3,
+      "milliseconds": [
+        0.8758613268534342,
+        0.7277226448059082,
+        0.9720746676127116,
+        0.7802879810333252,
+        0.7311360041300455
+      ],
+      "median_ms": 0.7802879810333252,
+      "median_tflops": 176.1387549376211,
+      "min_ms": 0.7277226448059082,
+      "max_ms": 0.9720746676127116,
+      "compute_type": 68,
+      "input_type": 14,
+      "output_type": "FP32",
+      "sampled_large_exact": true,
+      "sampled_large_elements": 1024,
+      "sampled_large_max_abs_error": 0.0,
+      "output_sha256": "0e3b4c1a854bc95d06fb91f688b1f4f739fe7e76972c889fa1bbeb042ac7c1bc",
+      "telemetry_before": {
+        "fields": [
+          "name",
+          "pci.bus_id",
+          "pci.device_id",
+          "driver_version",
+          "vbios_version",
+          "power.limit",
+          "power.draw",
+          "temperature.gpu",
+          "clocks.sm",
+          "clocks.mem",
+          "utilization.gpu",
+          "memory.used"
+        ],
+        "csv": "NVIDIA GeForce RTX 4080 SUPER, 00000000:01:00.0, 0x270210DE, 616.56, 95.03.44.00.6a, 320.00, 157.99, 56, 2655, 11251, 98, 9068",
+        "returncode": 0,
+        "error": ""
+      },
+      "telemetry_after": {
+        "fields": [
+          "name",
+          "pci.bus_id",
+          "pci.device_id",
+          "driver_version",
+          "vbios_version",
+          "power.limit",
+          "power.draw",
+          "temperature.gpu",
+          "clocks.sm",
+          "clocks.mem",
+          "utilization.gpu",
+          "memory.used"
+        ],
+        "csv": "NVIDIA GeForce RTX 4080 SUPER, 00000000:01:00.0, 0x270210DE, 616.56, 95.03.44.00.6a, 320.00, 157.99, 56, 2655, 11251, 98, 9068",
+        "returncode": 0,
+        "error": ""
+      }
+    }
+  ]
+}

@@ -1,6 +1,13 @@
-# MSI RTX 4080 SUPER Windows port preparation
+# MSI RTX 4080 SUPER Windows port
 
-Status: a diagnostic build, **not an implemented or hardware-validated unlock**.
+Status, October 30, 2026: **one successful manual USB unlock and Windows
+handoff**, with signed NVIDIA 616.56, Secure Boot enabled and passing short CUDA
+numerical checks. FP16/FP32 cuBLAS at 4096³ measured 186.41 TFLOP/s and BF16/FP32
+176.14 TFLOP/s. No matched stock run or extended stability test exists for this
+machine. See the [complete result and comparison](../../docs/evidence/rtx4080s-msi-windows-20261030/README.md),
+[exact tested firmware bundle](../../firmware/private-windows/rtx4080s-msi-20261030/README.md),
+and [implementation, offline tests and manual procedure](EXPERIMENTAL.md).
+The preparation commands below still build only the read-only diagnostic.
 Preparation can run entirely in the current Windows session:
 
 ```powershell
@@ -25,8 +32,8 @@ the unsigned image; it does not prevent an offline build.
 The diagnostic profile requires `10de:2702 / 1462:5118`, revision A1, one unique
 matching GPU, PCI `0000:01:00.0`, memory decode enabled and bus mastering disabled,
 BAR0 `0xdd000000` with a matching 16 MiB firmware resource descriptor, and AD103
-chip `0x193000a1`. The BAR/location come from Windows inventory and remain
-unconfirmed in UEFI. If those guards fail, the probe records inventory and the
+chip `0x193000a1`. The BAR/location were confirmed in the October 30 UEFI
+captures and the successful transaction. If those guards fail, the probe records inventory and the
 refusal instead of enabling decode or reading MMIO. It preserves the existing
 AD104 diagnostic profile and does not modify the unlock application's admission.
 
@@ -38,14 +45,17 @@ ownership or authorize disconnecting either NVIDIA display child.
 
 The observed host is MSI X870E GAMING PLUS WIFI, BIOS 1.A62, Windows 11 build
 26200, NVIDIA 616.56, VBIOS 95.03.44.00.6a, 16 GiB card. Secure Boot is currently
-enabled according to the Windows registry. The kit is unsigned and **cannot be
-booted under that policy as-is**. No signing keys or certificates are generated
-or enrolled, and Secure Boot is not disabled by these scripts.
+enabled. `Prepare.ps1` produces an unsigned diagnostic; the owner's October 28
+kit was subsequently signed with the existing local certificate and booted
+successfully. The owner reports selecting the USB without changing security
+settings. No firmware keys were enrolled by this work. The experimental unlock
+uses the same signer and executed with `SecureBoot=1` on October 30. This
+confirms acceptance on this host; it does not identify the trust route or
+establish acceptance on other firmware installations.
 
-The next development input is a manually authorized preboot capture on a
-separate FAT32 USB. Do not run that step until the owner is ready to shut down
-and the unsigned-image boot policy has been resolved. Preserve existing USB
-boot files. The probe refuses to log on a non-USB device, saves new
+The October 30 captures are already available and reviewed. For a later
+diagnostic capture, use a separate FAT32 USB and preserve existing USB boot
+files. The probe refuses to log on a non-USB device, saves new
 `RTX4080S-PROBE/CAPnnnn.JSON` files, and returns to firmware after eight seconds;
 it does not chainload Windows. Select Windows Boot Manager afterwards.
 Raw captures contain firmware and loaded code: keep them private and outside Git.
@@ -70,12 +80,19 @@ of plugged-in monitors. They do not authorize releasing a driver. Supply
 authenticated; the report always leaves activation and hardware qualification
 false. Optional `--output NEW-FILE.json` refuses to overwrite an existing file.
 
-A capture must be reviewed for ROM/FWSEC inputs, memory geometry, BARs and the
-complete console/driver ownership graph before implementing the write-enabled
-profile and replaying its transaction/cleanup. Later hardware validation needs
-the actual Windows handoff, current-boot logs, numerical correctness and matched
-stock/unlocked measurements. A compiled EFI or passing host mock is not proof
-of an unlock. No unlock or performance gain has been observed on this PC.
+The October 30 captures were reviewed for ROM/FWSEC inputs, memory geometry,
+BARs and the complete console/driver ownership graph before implementing the
+write-enabled profile and replaying its transaction/cleanup. The subsequent
+USB log records payload completion, full-rate selectors before and after FLR,
+and released DMA. Windows driver health and numerical checks were collected
+after that boot. The diagnostic review still reports activation/qualification
+false: a capture review alone cannot establish an actual unlock. Hardware
+evidence is recorded separately, and a matched speedup remains unmeasured.
+
+The archived candidate and its pre-test manifests retain their original
+"UNVALIDATED" wording and false hardware-test fields. They describe what was
+known when the exact binary was built; the dated result supplies later evidence.
+Do not rebuild solely to change the banner and call that new image tested.
 
 Reference implementations are board-specific: the checkout's
 [AD104 port](../ad104-msi/README.md) pins another MSI GPU/Z490 host;

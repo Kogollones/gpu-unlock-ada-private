@@ -1,0 +1,125 @@
+{
+  "schema": 1,
+  "scope": "owner-private MSI RTX4080S/X870E artifact backup",
+  "hardware_attempt_utc": "2026-10-30T20:17:40Z",
+  "candidate": "candidate-20261030-195526-925",
+  "archive": "rtx4080s-msi-x870e-20261030.zip",
+  "archive_bytes": 72978003,
+  "archive_sha256": "5d51deded7f179cf7678575f8ce17a360a7cf10670386d2690645dadd1f4bc67",
+  "signed_efi_sha256": "cb33d814ad158451f207c3ce846b8a584701adf6f635c547700b46adcfc9bea2",
+  "members": {
+    "FILES.json": {
+      "bytes": 3816,
+      "sha256": "5378953b2de64d6a7469eb01366f6f9baeec6c1009483611c92460079a455ae5"
+    },
+    "MANUAL.md": {
+      "bytes": 8249,
+      "sha256": "a89e015cbbdddebffd0eff6733b90e7d6e27f3baecf56c0a4a8877e86104054c"
+    },
+    "NOTICES/LICENSE": {
+      "bytes": 18092,
+      "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643"
+    },
+    "NOTICES/ad104-LICENSES/CMP40HX-MIT.txt": {
+      "bytes": 1056,
+      "sha256": "1126322e2cc8d165adc4c792eeb195717de2bcc7b39be1ce77959d78e87ef685"
+    },
+    "NOTICES/ad104-LICENSES/EDK2-BSD-2-Clause-Patent.txt": {
+      "bytes": 2681,
+      "sha256": "7aa278b6f1a2125d0a0c596fa537caca5a41e7b03f7d2dd0489905f65ffdb984"
+    },
+    "NOTICES/ad104-LICENSES/NVIDIA-Driver.txt": {
+      "bytes": 22653,
+      "sha256": "c692fb14ad4f499c6aee1b9e144e6905148c420e6225b17cb2937366c1e507ad"
+    },
+    "NOTICES/ad104-LICENSES/NVIDIA-MIT.txt": {
+      "bytes": 1219,
+      "sha256": "fdeba0dc20cc705443771b5ca293292e3437abb2bb3021b6a0c65f0203b1db91"
+    },
+    "NOTICES/ad104-THIRD_PARTY_NOTICES.md": {
+      "bytes": 1324,
+      "sha256": "ae1ebb02b22e510700a476ef24ce2e1cdcac034337ee7afb4fb78ed7b73a21d0"
+    },
+    "NOTICES/ad104-UPSTREAM-WINDOWS-NOTICES.md": {
+      "bytes": 3349,
+      "sha256": "e5341b8c5b6cebe0b98b177b7798bbc5167ca620d533450f0b21ace79976d88e"
+    },
+    "NOTICES/firmware-NOTICE.md": {
+      "bytes": 4367,
+      "sha256": "ac8efb321c3104993a89330d539c8b718980437befecdf975a31ee0c61ed38a0"
+    },
+    "NOTICES/licenses/CMP40HX-MIT.txt": {
+      "bytes": 1056,
+      "sha256": "1126322e2cc8d165adc4c792eeb195717de2bcc7b39be1ce77959d78e87ef685"
+    },
+    "NOTICES/licenses/GPL-2.0.txt": {
+      "bytes": 18092,
+      "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643"
+    },
+    "NOTICES/licenses/NVIDIA-MIT.txt": {
+      "bytes": 1219,
+      "sha256": "fdeba0dc20cc705443771b5ca293292e3437abb2bb3021b6a0c65f0203b1db91"
+    },
+    "NOTICES/rtx4080s-THIRD_PARTY.md": {
+      "bytes": 1433,
+      "sha256": "79e600eab3cb8e2dd35ea5f96f7dd24d22c701d0cfc5355c547714cc9d1546b9"
+    },
+    "RECORDS/candidate-manifest.json": {
+      "bytes": 18382,
+      "sha256": "a153e76280332364a8325acc6c2ed5441a61277516f7e709bcaa79e917dd6c40"
+    },
+    "RECORDS/signing-manifest.json": {
+      "bytes": 749,
+      "sha256": "43c4a13eac102549709351ab988b058137dd0b20053ae582a888a6cd0fef5a69"
+    },
+    "SOURCE/rtx4080s_boot_profile.h": {
+      "bytes": 418,
+      "sha256": "f3a38cd679ca13b15f8689bc60c71c2297f8cd0720d7e830ad10b26c887b59cf"
+    },
+    "SOURCE/rtx4080s_captured.h": {
+      "bytes": 1168,
+      "sha256": "329ab620bfdc6607223d00445e67fc1a49c0f7d50fad045d3b9922b0fe21f2e9"
+    },
+    "SOURCE/rtx4080s_graph.h": {
+      "bytes": 59845,
+      "sha256": "55f784ad71a4b7ba2f7c51d59b0c74f1308d0189ac9a20a1d409d39221597951"
+    },
+    "USB/EFI/BOOT/BOOTX64.EFI": {
+      "bytes": 101792,
+      "sha256": "cb33d814ad158451f207c3ce846b8a584701adf6f635c547700b46adcfc9bea2"
+    },
+    "USB/EFI/GPUUnlock/RTX4080S-EXPERIMENTAL.EFI": {
+      "bytes": 101792,
+      "sha256": "cb33d814ad158451f207c3ce846b8a584701adf6f635c547700b46adcfc9bea2"
+    },
+    "USB/RTX4080S-ASSETS/NVIDIA-LICENSE": {
+      "bytes": 22653,
+      "sha256": "c692fb14ad4f499c6aee1b9e144e6905148c420e6225b17cb2937366c1e507ad"
+    },
+    "USB/RTX4080S-ASSETS/booter_load_ad102.bin": {
+      "bytes": 57672,
+      "sha256": "6ee05b20e1dc244c08c052f36ef28469b8d09f4955d1fe33e48a179e11a7fd49"
+    },
+    "USB/RTX4080S-ASSETS/gsp_boot_ad102.bin": {
+      "bytes": 36864,
+      "sha256": "45d6335a8185d6ff13e8d1484cea73f68d3d13aa1c19dc080ed1c3482dd5bac0"
+    },
+    "USB/RTX4080S-ASSETS/gsp_boot_desc_ad102.bin": {
+      "bytes": 84,
+      "sha256": "83f8f3f1f5f9496e0ea8fc7103c2beb64d0b6de2f5ffe725f13514de5a95fa42"
+    },
+    "USB/RTX4080S-ASSETS/gsp_ga10x.bin": {
+      "bytes": 84277400,
+      "sha256": "572373620a37418f24dc16b5031c39338778c3257e48e8408de9a57291b24f3a"
+    },
+    "USB/RTX4080S-ASSETS/v67-ad102-610.43.03-four-plm.bin": {
+      "bytes": 64000,
+      "sha256": "44c36b2d6b3424e53e18f3e55db85c833655de071ce66ce42749588a4a7dc8cb"
+    }
+  },
+  "new_hardware_execution_by_packaging": false,
+  "private_key_included": false,
+  "windows_boot_manager_included": false,
+  "vbios_dump_or_captured_driver_code_included": false,
+  "source_manifest_is_historical_pre_test_record": true
+}

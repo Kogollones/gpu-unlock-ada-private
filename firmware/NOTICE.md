@@ -1,5 +1,18 @@
 # Firmware provenance and distribution scope
 
+## Owner's private Windows archive
+
+At the owner's request, this private fork retains the exact tested EFI and
+five firmware assets in `private-windows/rtx4080s-msi-20261030/`. The archive
+preserves the complete NVIDIA agreement and original source/payload notices;
+it does not relicense those files. This is an owner-specific artifact backup,
+not a public redistribution or generic Windows release. It contains no private
+signing key, Windows boot-manager binary, physical VBIOS dump or captured driver
+code. The original source-distribution policy below remains applicable to the
+upstream project and package-source exports, which exclude the private archive.
+
+## Original generation workflow
+
 `gsp_ga10x.bin` is extracted byte-for-byte from the checksummed NVIDIA
 610.43.03 package in `artifacts-610.43.03.json`. The Booter and GSP boot images
 are decoded unchanged from the pinned 610.43.03 source archive. The extraction
@@ -16,7 +29,7 @@ The source archive's open-module licensing does **not** license NVIDIA firmware.
 The binary package contains the NVIDIA Driver License Agreement. Its section
 1.1(d) addresses distribution for open source operating-system kernels with
 unchanged binary files and inclusion of the agreement. Additional limitations
-apply, including NVIDIA-platform use. This source repository supplies generators
+apply, including NVIDIA-platform use. The upstream source repository supplies generators
 and does not distribute the NVIDIA archives or generated firmware. The generated
 packages preserve the extracted agreement alongside the firmware.
 

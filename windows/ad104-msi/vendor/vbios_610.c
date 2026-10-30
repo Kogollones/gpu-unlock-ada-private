@@ -113,7 +113,7 @@ static int descriptor(const u8 *rom, size_t length, u64 off,
 	struct gpu_unlock_fwsec fw = { 0 };
 	u32 hdr, size, stored, bits, count = 0;
 
-	if (range(length, off, 44))
+	if (length > 0xffffffffu || range(length, off, 44))
 		return GU_DIAG(-EINVAL);
 	hdr = r32(rom + off);
 	size = hdr >> 16;
@@ -130,7 +130,7 @@ static int descriptor(const u8 *rom, size_t length, u64 off,
 	fw.image_size = (stored + 255) & ~255u;
 	if (range(length, off + size, fw.image_size))
 		return GU_DIAG(-EINVAL);
-	fw.image_off = off + size;
+	fw.image_off = (u32)(off + size);
 	fw.pkc_off = r32(rom + off + 8);
 	fw.interface_off = r32(rom + off + 12);
 	fw.imem_pa = r32(rom + off + 16);
@@ -143,7 +143,7 @@ static int descriptor(const u8 *rom, size_t length, u64 off,
 	fw.ucode_id = rom[off + 38];
 	fw.sig_count = rom[off + 39];
 	fw.sig_versions = r16(rom + off + 40);
-	fw.sig_off = off + 44;
+	fw.sig_off = (u32)(off + 44);
 	fw.sig_bytes = size - 44;
 	GU_NOTE("FWSEC geometry: image_off=%#x size=%#x imem=%#x va=%#x pa=%#x dmem=%#x pa=%#x pkc=%#x interface=%#x engine=%#x ucode=%u signatures=%u versions=%#x bytes=%u\n",
 		fw.image_off, fw.image_size, fw.imem_size, fw.imem_va, fw.imem_pa,
@@ -295,7 +295,8 @@ int gpu_unlock_fwsec_patch_frts(u8 *image, const struct gpu_unlock_fwsec *fw, u6
 	w32(cmd + 20, 2);
 	w32(cmd + 24, 1);
 	w32(cmd + 28, 20);
-	w32(cmd + 32, frts_offset >> 12);
+	if ((frts_offset >> 12) > 0xffffffffu)return GU_DIAG(-EOVERFLOW);
+	w32(cmd + 32, (u32)(frts_offset >> 12));
 	w32(cmd + 36, 0x100);
 	w32(cmd + 40, 2);
 	memcpy(dmem + cmd_off, cmd, sizeof(cmd));

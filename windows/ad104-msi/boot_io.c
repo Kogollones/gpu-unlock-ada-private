@@ -9,6 +9,16 @@
 #include <Protocol/LoadedImage.h>
 #include <Protocol/SimpleFileSystem.h>
 #include <Guid/FileInfo.h>
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
+#ifdef GU_RTX4080S_MSI
+#define GU_LOG_DIRECTORY L"\\RTX4080S-UNLOCK"
+#define GU_ASSET_DIRECTORY L"\\RTX4080S-ASSETS\\"
+#else
+#define GU_LOG_DIRECTORY L"\\AD104-UNLOCK"
+#define GU_ASSET_DIRECTORY L"\\AD104-ASSETS\\"
+#endif
 
 static EFI_SYSTEM_TABLE *Table;
 static EFI_HANDLE Self,Windows,OwnVolume;
@@ -33,8 +43,8 @@ static BOOLEAN Inspect(const EFI_DEVICE_PATH_PROTOCOL *p,UINTN *size,BOOLEAN *us
     if(p->Type==MEDIA_DEVICE_PATH&&p->SubType==MEDIA_HARDDRIVE_DP) {
       if(n!=sizeof(HARDDRIVE_DEVICE_PATH)||++hd!=1)return FALSE;
       const HARDDRIVE_DEVICE_PATH *d=(const VOID *)p;
-      if(d->MBRType==2&&d->SignatureType==2&&d->PartitionNumber==2&&d->PartitionStart==1085440&&
-         d->PartitionSize==202752&&!memcmp(d->Signature,&WindowsPartition,16))*windows=TRUE;
+      if(d->MBRType==2&&d->SignatureType==2&&d->PartitionNumber==GU_WINDOWS_PARTITION_NUMBER&&d->PartitionStart==GU_WINDOWS_PARTITION_START&&
+         d->PartitionSize==GU_WINDOWS_PARTITION_SECTORS&&!memcmp(d->Signature,&WindowsPartition,16))*windows=TRUE;
     }
     at+=n;p=(const VOID *)((const UINT8 *)p+n);
   }
@@ -68,7 +78,7 @@ EFI_STATUS GuBootOpen(EFI_HANDLE image,EFI_SYSTEM_TABLE *t) {
   s=b->HandleProtocol(OwnVolume,&FsGuid,(VOID **)&fs);if(s!=EFI_SUCCESS||!fs)return EFI_UNSUPPORTED;
   s=fs->OpenVolume(fs,&Root);if(s!=EFI_SUCCESS||!Root)return EFI_DEVICE_ERROR;
   EFI_FILE_PROTOCOL *dir=NULL;
-  s=Root->Open(Root,&dir,L"\\AD104-UNLOCK",EFI_FILE_MODE_READ|EFI_FILE_MODE_WRITE|EFI_FILE_MODE_CREATE,EFI_FILE_DIRECTORY);
+  s=Root->Open(Root,&dir,GU_LOG_DIRECTORY,EFI_FILE_MODE_READ|EFI_FILE_MODE_WRITE|EFI_FILE_MODE_CREATE,EFI_FILE_DIRECTORY);
   if(s!=EFI_SUCCESS||!dir)return EFI_DEVICE_ERROR;
   for(UINTN slot=1;slot<=9999;slot++) {
     CHAR16 name[]=L"RUN0000.TXT";UINTN number=slot;
@@ -102,8 +112,8 @@ static EFI_STATUS ReadFile(EFI_FILE_PROTOCOL *root,const CHAR16 *name,UINTN expe
   if(s!=EFI_SUCCESS){GuFree(p);return s;}*data=p;return EFI_SUCCESS;
 }
 EFI_STATUS GuBootLoadAssets(VOID) {
-  static const CHAR16 *names[]={L"\\AD104-ASSETS\\booter_load_ad102.bin",L"\\AD104-ASSETS\\v67-ad102-610.43.03-four-plm.bin",
-    L"\\AD104-ASSETS\\gsp_ga10x.bin",L"\\AD104-ASSETS\\gsp_boot_ad102.bin",L"\\AD104-ASSETS\\gsp_boot_desc_ad102.bin"};
+  static const CHAR16 *names[]={GU_ASSET_DIRECTORY L"booter_load_ad102.bin",GU_ASSET_DIRECTORY L"v67-ad102-610.43.03-four-plm.bin",
+    GU_ASSET_DIRECTORY L"gsp_ga10x.bin",GU_ASSET_DIRECTORY L"gsp_boot_ad102.bin",GU_ASSET_DIRECTORY L"gsp_boot_desc_ad102.bin"};
   static const char *full[]={"gpu-unlock/610.43.03/booter_load_ad102.bin","gpu-unlock/610.43.03/v67-ad102-610.43.03-four-plm.bin",
     "gpu-unlock/610.43.03/gsp_ga10x.bin","gpu-unlock/610.43.03/gsp_boot_ad102.bin","gpu-unlock/610.43.03/gsp_boot_desc_ad102.bin"};
   static const UINTN sizes[]={57672,64000,84277400,36864,84};
@@ -133,9 +143,9 @@ EFI_STATUS GuBootLoadWindows(VOID) {
   s=b->HandleProtocol(volume,&FsGuid,(VOID **)&fs);
   if(s==EFI_SUCCESS&&fs)s=fs->OpenVolume(fs,&root);else s=EFI_UNSUPPORTED;
   if(s!=EFI_SUCCESS||!root)return EFI_DEVICE_ERROR;
-  VOID *bytes=NULL;s=ReadFile(root,WindowsName,3086728,&bytes);
+  VOID *bytes=NULL;s=ReadFile(root,WindowsName,GU_WINDOWS_IMAGE_BYTES,&bytes);
   EFI_STATUS closed=root->Close(root);if(s==EFI_SUCCESS)s=closed;
-  if(s==EFI_SUCCESS&&!GuHashMatches(bytes,3086728,"b6f5ff8a5f605840796875259bba555d0642745a7ac8a5b38d16603768b22570"))s=EFI_CRC_ERROR;
+  if(s==EFI_SUCCESS&&!GuHashMatches(bytes,GU_WINDOWS_IMAGE_BYTES,GU_WINDOWS_IMAGE_SHA256))s=EFI_CRC_ERROR;
   UINTN node_bytes=4+sizeof(WindowsName),total=path_bytes-4+node_bytes+4;
   UINT8 *path=NULL;
   if(s==EFI_SUCCESS){path=GuAlloc(total);if(!path)s=EFI_OUT_OF_RESOURCES;}
@@ -144,7 +154,7 @@ EFI_STATUS GuBootLoadWindows(VOID) {
     node[0]=MEDIA_DEVICE_PATH;node[1]=MEDIA_FILEPATH_DP;node[2]=(UINT8)node_bytes;node[3]=(UINT8)(node_bytes>>8);
     memcpy(node+4,WindowsName,sizeof(WindowsName));node+=node_bytes;
     node[0]=END_DEVICE_PATH_TYPE;node[1]=END_ENTIRE_DEVICE_PATH_SUBTYPE;node[2]=4;node[3]=0;
-    s=b->LoadImage(FALSE,Self,(VOID *)path,bytes,3086728,&Windows);
+    s=b->LoadImage(FALSE,Self,(VOID *)path,bytes,GU_WINDOWS_IMAGE_BYTES,&Windows);
   }
   GuFree(bytes);GuFree(path);
   if(s==EFI_SUCCESS) {
@@ -157,7 +167,11 @@ EFI_STATUS GuBootLoadWindows(VOID) {
 EFI_STATUS GuBootChoose(BOOLEAN *unlock) {
   if(!unlock||!Table||!Table->ConIn||!Table->ConIn->ReadKeyStroke)return EFI_UNSUPPORTED;
   *unlock=FALSE;
+#ifdef GU_RTX4080S_MSI
+  GuBootSay(L"\r\nMSI RTX 4080 SUPER / X870E - EXPERIMENTAL, NOT HARDWARE VALIDATED\r\nU: attempt once, then Windows. S/Esc or 30 seconds: stock Windows.\r\nDuring an attempt, leave peripherals connected and untouched.\r\nIf Windows does not return within 4 minutes, power off fully, wait 10 seconds,\r\nthen select Windows Boot Manager. Logs: USB RTX4080S-UNLOCK/RUNxxxx.TXT.\r\n");
+#else
   GuBootSay(L"\r\nAD104 EXPERIMENTAL v0.5.4 - validation sur ce PC en cours.\r\nU : un essai, puis Windows. S/Echap ou 30 s : Windows normal.\r\nL'image peut rester FIGEE sur ce message pendant la liberation du GPU.\r\nNe plus toucher aux peripheriques. Si Windows ne revient pas apres 4 minutes,\r\neteindre completement, attendre 10 s, puis choisir Windows Boot Manager.\r\nJournal : USB AD104-UNLOCK/RUNxxxx.TXT. Aucun nouvel essai automatique.\r\n");
+#endif
   for(UINTN i=0;i<300;i++) {
     EFI_INPUT_KEY key;EFI_STATUS s=Table->ConIn->ReadKeyStroke(Table->ConIn,&key);
     if(s==EFI_SUCCESS) {
@@ -180,5 +194,9 @@ EFI_STATUS GuBootWindows(VOID) {
 }
 VOID GuBootHalt(VOID) {
   GuBootSay(L"\r\nSTOPPED. Power OFF fully; next boot use Windows Boot Manager.\r\n");
+#ifdef _MSC_VER
+  for(;;)_mm_pause();
+#else
   for(;;)__asm__ volatile("pause");
+#endif
 }

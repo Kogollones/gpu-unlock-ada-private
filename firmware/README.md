@@ -1,5 +1,12 @@
 # Pinned 610.43.03 firmware
 
+The owner's private Windows fork also archives the
+[exact MSI RTX 4080 SUPER USB firmware bundle tested on October 30, 2026](private-windows/rtx4080s-msi-20261030/README.md).
+It contains the signed EFI, the five hash-pinned assets and their licences.
+The bundle is excluded from source-package exports. The original generation
+workflow below remains available; the private archive does not change the
+licensing of NVIDIA binaries.
+
 `make inputs` runs `fetch_artifacts.py`, which downloads the NVIDIA open kernel
 module source archive and the exact CachyOS `nvidia-utils` package pinned in
 `artifacts-610.43.03.json`. Downloads use HTTPS and are checked against their

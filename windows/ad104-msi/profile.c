@@ -24,15 +24,15 @@ BOOLEAN GuAd104AssetsValid(VOID) {
 }
 BOOLEAN GuAd104PromMatches(const VOID *Data,UINTN Bytes) {
   return Bytes==1048576 && GuHashMatches(Data,Bytes,
-    "c81eb48fc6cb4f320d302e98f88db7101dfc1e4c3e21de82f57a6c8233ad3fb4");
+    GU_PROM_SHA256);
 }
 BOOLEAN GuAd104FwsecMatches(const struct gpu_unlock_fwsec *f) {
-  return f && f->image_off==0x45488 && f->image_size==0x10300 &&
-    f->imem_pa==0 && f->imem_size==0xf500 && f->imem_va==0 &&
-    f->dmem_pa==0 && f->data_off==0xf500 && f->dmem_size==0xd80 &&
+  return f && f->image_off==GU_FWSEC_IMAGE_OFF && f->image_size==GU_FWSEC_IMAGE_SIZE &&
+    f->imem_pa==0 && f->imem_size==GU_FWSEC_IMEM_SIZE && f->imem_va==0 &&
+    f->dmem_pa==0 && f->data_off==GU_FWSEC_IMEM_SIZE && f->dmem_size==0xd80 &&
     f->pkc_off==0xb24 && f->interface_off==0x1c && f->ucode_id==9 &&
     f->engine_mask==0x400 && f->sig_count==2 && f->sig_versions==3 &&
-    f->sig_off==0x45188 && f->sig_bytes==768;
+    f->sig_off==GU_FWSEC_SIG_OFF && f->sig_bytes==768;
 }
 
 static BOOLEAN Config(VOID) {
@@ -43,21 +43,21 @@ static BOOLEAN Config(VOID) {
   for(UINTN i=0;i<64;i++)
     if(EFI_ERROR(GuConfigRead(EfiPciIoWidthUint32,(UINT32)i*4,&c[i])))return FALSE;
   if(!GuCheckConfig(c,s,b,d,f,&caps) || c[2]!=0x030000a1 ||
-     c[4]!=GU_BAR0_BASE || c[5]!=0xc || c[6]!=0x40 || c[7]!=0xc ||
-     c[8]!=0x44 || c[9]!=0x4001)return FALSE;
+     c[4]!=GU_BAR0_BASE || c[5]!=0xc || c[6]!=GU_BAR1_HIGH || c[7]!=0xc ||
+     c[8]!=GU_BAR3_HIGH || c[9]!=GU_IO_BAR)return FALSE;
   return caps.pm==Gu.pm_cap && caps.pcie==Gu.pcie_cap &&
     caps.pcie_version==Gu.pcie_version && caps.msi==Gu.msi_cap && caps.msix==Gu.msix_cap;
 }
 static BOOLEAN Registers(UINT32 *Ss0,UINT32 *Ss1) {
   static const UINT32 offsets[]={0,0x118128,0x118234,0x110100,0x1fa824,0x1fa828,
     0x1fa7cc,0x1fa7c4,0x9a0148,0x823804,0x823814,0x823818,0x1183a4,0x625f04,0x1fa7c8,0x1fa82c,0x1fa830,0x824148,0x8241e0};
-  static const UINT32 values[]={0x194000a1,0x8b8f,0x3ff,0x10,0x1ffffe00,0,
-    0x4cb8f,0x4cb8f,0xffffff0f,0xffffff8f,0x233,0x410080,0x2ffa,1,0x45cb8f,0x100000,0x2ef9ff0,1,1};
+  static const UINT32 values[]={GU_BOARD_CHIP,0x8b8f,0x3ff,0x10,0x1ffffe00,0,
+    0x4cb8f,0x4cb8f,0xffffff0f,0xffffff8f,0x233,0x410080,GU_DEVICE_MEMORY_SIZE,1,0x45cb8f,0x100000,GU_MMU_HI,1,1};
   for(UINTN i=0;i<sizeof(offsets)/sizeof(offsets[0]);i++)
     if(GuRead32(offsets[i])!=values[i] || Gu.fault)return FALSE;
   *Ss0=GuRead32(0x82381c);*Ss1=GuRead32(0x823820);
   return !Gu.fault && *Ss0!=0xffffffff && (*Ss0&0xffff0000)!=0xbadf0000 &&
-    *Ss0!=0x88888888 && *Ss1==1;
+    *Ss0!=0x88888888 && *Ss1==GU_COLD_SS1;
 }
 BOOLEAN GuAd104ColdEntry(VOID) {
   UINT32 ss0,ss1;

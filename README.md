@@ -1,12 +1,34 @@
-# Private Windows development copy
+# MSI RTX 4080 SUPER / X870E — private Windows port
 
-This repository keeps independent Windows development for an MSI RTX 4080 SUPER
-(`10de:2702 / 1462:5118`) and an MSI X870E host. It is not an upstream contribution.
-The current addition is a diagnostic-only UEFI profile and local preparation kit;
-no unlock or performance gain has been validated on this system. See
-[Windows preparation and status](windows/rtx4080s-msi/README.md).
+**October 30, 2026: one successful manual USB unlock and Windows handoff.**
+The MSI `10de:2702 / 1462:5118` retained full-rate readbacks after the GPU reset,
+then Windows 11 loaded the signed NVIDIA **616.56** driver with Secure Boot
+enabled. Short FP32, FP16/FP32 and BF16/FP32 numerical checks passed. This is
+one observed boot on the captured X870E host; repeated boots, a matched stock
+measurement and extended stability remain untested.
 
-Original project history, source, licences and credits are retained below.
+| Current Windows cuBLAS test, 4096³ | Median throughput |
+|---|---:|
+| FP16 with FP32 accumulation | **186.41 TFLOP/s** |
+| BF16 with FP32 accumulation | **176.14 TFLOP/s** |
+| FP32 pedantic | **36.03 TFLOP/s** |
+
+For context, the [separate matched RTX 4080 SUPER Linux report](docs/evidence/ada2702-ada2704-matched/README.md)
+measured **98.7 stock → 190.7 unlocked TFLOP/s** for FP16/FP32 cuBLAS at the
+same 4096³ shape. Our 186.41 result is about 2.2% below that unlocked result,
+consistent with it, but another card's baseline cannot establish this card's
+speedup. That report used Linux, driver 595.99.02 and 250 W; this run used
+Windows, 616.56 and 320 W with desktop/background compute processes present.
+The approximately 2× **instruction rates** below are separate measurements,
+and the RTX 4090's absolute throughput does not apply to an RTX 4080 SUPER.
+
+- [Windows instructions and exact hardware scope](windows/rtx4080s-msi/README.md)
+- [Boot log, driver checks, numerical results and limitations](docs/evidence/rtx4080s-msi-windows-20261030/README.md)
+- [Exact tested EFI and firmware bundle, with hashes and notices](firmware/private-windows/rtx4080s-msi-20261030/README.md)
+
+This is the owner's private Windows development and artifact repository, not an
+upstream contribution or a general installer. Original project history, source,
+licences, credits and Linux results are retained below.
 
 # GPU unlock 1.1.1 — RTX 4090 and experimental Ada GPUs
 
@@ -186,7 +208,9 @@ does not fetch inputs itself.
 The source archive produced by `make dist`, the Debian source package and the
 `.nosrc.rpm` contain no NVIDIA archives or generated firmware. See
 [firmware/README.md](firmware/README.md) for the input and asset layout.
-Prebuilt firmware packages are not distributed by this repository.
+The upstream Linux source distribution supplies no prebuilt firmware packages;
+this private fork additionally retains the owner-specific Windows archive linked
+above, outside the package-source exports.
 
 ## Enable at boot
 

@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "validated_utc": "2026-10-30T20:42:09.289709+00:00",
+  "gpu_executed": false,
+  "source_snapshot_matches_original_manifest": true,
+  "source_files_checked": 138,
+  "offline_rebuild": {
+    "unsigned_efi_sha256": "a5a76abd8dd2154405d8f9e4cba3de51e9540e0f06a94fb32c5417a671d17bae",
+    "byte_identical_to_tested_unsigned_image": true,
+    "c_scenarios_passed": 162,
+    "tests": {
+      "transaction": {
+        "last_line": "90 real core + compat + UEFI port scenarios passed; all PCI/MMIO/DMA/firmware execution simulated.",
+        "sha256": "173de0874bae83964a0f723221fb34a5ea7c94f271a952052c75d3f4d10350b0"
+      },
+      "guards": {
+        "last_line": "17 admission cases PASS; all hardware operations simulated.",
+        "sha256": "cc5212296a33aa2d9e0059752c014c55201854dddb8815af2fc713b5402c23f9"
+      },
+      "ownership": {
+        "last_line": "X870E ownership: 32 scenarios, 634531 checks; captured graph/code, all effects simulated.",
+        "sha256": "2ccc85f736e369ea1b7f5d26eb3e26daeead71ef7010585c29f1da511c208db0"
+      },
+      "app": {
+        "last_line": "app flow: 296 checks; 15 scenarios, all effects simulated.",
+        "sha256": "37247313e47b5e4f9dd82e8e322db51d47786ce39910c4208b81e7b445d60c92"
+      },
+      "boot-io": {
+        "last_line": "boot I/O: 571 checks; 8 cases, real file bytes, all EFI services simulated.",
+        "sha256": "dbe8a2a7763889397c427ac8e45fac939770964410be38fb6d3f2e8ae7650474"
+      }
+    },
+    "new_candidate_hardware_tested": false
+  },
+  "signature_verification": {
+    "verifier": "windows/rtx4080s-msi/tools/EfiSignature.cs under Windows PowerShell 5.1",
+    "signed_efi_sha256": "cb33d814ad158451f207c3ce846b8a584701adf6f635c547700b46adcfc9bea2",
+    "cryptographic_signature_valid": true,
+    "rebuilt_executable_bytes_match_signed_image": true
+  },
+  "python_suites": [
+    {
+      "command": "python -m unittest discover -s windows/rtx4080s-msi -p 'test_*.py' -v",
+      "tests_passed": 4,
+      "exit_code": 0
+    },
+    {
+      "command": "python -m unittest discover -s windows/ad104-msi/diagnostic/tests -p 'test_*.py' -v",
+      "tests_passed": 10,
+      "exit_code": 0
+    }
+  ],
+  "archive_members_verified": 27,
+  "local_document_links_verified": 55,
+  "private_key_windows_bootmanager_rom_dump_driver_dump_included": false,
+  "original_pre_test_manifests_preserved": true
+}

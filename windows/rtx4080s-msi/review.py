@@ -51,7 +51,7 @@ def assess(inventory, capture=None, manifest=None, mock=False):
             gaps.append('No AMD 164e GOP was observed; Windows cabling does not prove firmware output routing.')
         if mock:
             gaps.append('Capture is simulated host-test data and cannot qualify this hardware.')
-    gaps += ['X870E/AD103 write transaction and multi-display release/cleanup still require implementation and replay.',
+    gaps += ['The experimental X870E/AD103 transaction and display release/cleanup require hardware validation; offline replay is not qualification.',
              'Actual Windows handoff, numerical correctness and matched performance remain untested.']
     return dict(schema=1, host_profile_matches=host_matches, can_prepare_diagnostic=host_matches,
                 can_activate_unlock=False, hardware_unlock_validated=False,

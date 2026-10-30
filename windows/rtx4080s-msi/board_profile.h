@@ -1,0 +1,18 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+/* Exact owner-captured MSI 4080 SUPER, X870E BIOS 1.A62. */
+#pragma once
+#define GU_BOARD_ID 0x270210deU
+#define GU_BOARD_SUBSYSTEM 0x51181462U
+#define GU_BOARD_CHIP 0x193000a1U
+#define GU_BAR0_BASE 0xdd000000ULL
+#define GU_DEVICE_MEMORY_SIZE 0x3ff8U
+#define GU_COLD_SS1 0U
+#define GU_BAR1_HIGH 0xf8U
+#define GU_BAR3_HIGH 0xfcU
+#define GU_IO_BAR 0xf001U
+#define GU_MMU_HI 0x3cf7ff0U
+#define GU_PROM_SHA256 "ad9fdd7276d86d21a31616bd9e68fb6d06b7185033ce50b5aacef11a75337d71"
+#define GU_FWSEC_IMAGE_OFF 0x45b48U
+#define GU_FWSEC_IMAGE_SIZE 0x10500U
+#define GU_FWSEC_IMEM_SIZE 0xf700U
+#define GU_FWSEC_SIG_OFF 0x45848U

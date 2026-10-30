@@ -1,0 +1,2 @@
+name, driver_version, pci.bus_id, vbios_version, memory.total [MiB], memory.used [MiB], temperature.gpu, power.draw [W], power.limit [W], utilization.gpu [%], clocks.current.graphics [MHz], clocks.current.memory [MHz], pstate, display_active, driver_model.current
+NVIDIA GeForce RTX 4080 SUPER, 616.56, 00000000:01:00.0, 95.03.44.00.6a, 16376 MiB, 8622 MiB, 40, 40.13 W, 320.00 W, 0 %, 2580 MHz, 11251 MHz, P2, Enabled, WDDM

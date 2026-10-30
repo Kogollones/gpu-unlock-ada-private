@@ -4,10 +4,26 @@
 #include <Protocol/DevicePath.h>
 #include <stddef.h>
 
+#ifdef GU_RTX4080S_MSI
+#include "../rtx4080s-msi/board_profile.h"
+#else
 #define GU_BOARD_ID 0x278210deU
 #define GU_BOARD_SUBSYSTEM 0x51321462U
 #define GU_BAR0_BASE 0x80000000ULL
 #define GU_DEVICE_MEMORY_SIZE 0x2ffaU
+#define GU_BOARD_CHIP 0x194000a1U
+#define GU_COLD_SS1 1U
+#define GU_BAR1_HIGH 0x40U
+#define GU_BAR3_HIGH 0x44U
+#define GU_IO_BAR 0x4001U
+#define GU_MMU_HI 0x2ef9ff0U
+#define GU_PROM_SHA256 "c81eb48fc6cb4f320d302e98f88db7101dfc1e4c3e21de82f57a6c8233ad3fb4"
+#define GU_FWSEC_IMAGE_OFF 0x45488U
+#define GU_FWSEC_IMAGE_SIZE 0x10300U
+#define GU_FWSEC_IMEM_SIZE 0xf500U
+#define GU_FWSEC_SIG_OFF 0x45188U
+#endif
+#define GU_DEVICE_ID (GU_BOARD_ID >> 16)
 /* The default artifact is read-only. Legacy host containment tests are never
    a production enable switch; experimental firmware requires its own define. */
 #if defined(GU_AD104_HOST_TEST) && __STDC_HOSTED__ != 1

@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "observation_date": "2026-10-30",
+  "successful_physical_attempts_observed": 1,
+  "cold_power_cycle_independently_verified": false,
+  "firmware_transaction_succeeded": true,
+  "full_rate_readback_after_flr": true,
+  "dma_live_at_logged_completion": 0,
+  "windows_handoff_corroborated": true,
+  "driver_version": "616.56",
+  "driver_signature_valid": true,
+  "secure_boot_enabled": true,
+  "short_numerical_checks_passed": true,
+  "post_windows_selector_register_read_performed": false,
+  "matched_stock_baseline_available": false,
+  "same_card_speedup_ratio": null,
+  "extended_stability_validated": false,
+  "repeated_boots_validated": false,
+  "automatic_activation_installed": false,
+  "results": [
+    {
+      "mode": "fp32_pedantic",
+      "median_tflops": 36.025158477957696,
+      "size": 4096,
+      "full_256_exact": true,
+      "sampled_large_exact": true
+    },
+    {
+      "mode": "fp16_fp32",
+      "median_tflops": 186.4135183320476,
+      "size": 4096,
+      "full_256_exact": true,
+      "sampled_large_exact": true
+    },
+    {
+      "mode": "bf16_fp32",
+      "median_tflops": 176.1387549376211,
+      "size": 4096,
+      "full_256_exact": true,
+      "sampled_large_exact": true
+    }
+  ],
+  "cross_system_reference": {
+    "path": "../ada2702-ada2704-matched/README.md",
+    "source_blob": "12c8f2b1548242cd86628ee977b4a7028a0efa37",
+    "mode": "FP16/FP32 cuBLAS 4096^3",
+    "other_card_stock_tflops": 98.7,
+    "other_card_unlocked_tflops": 190.7,
+    "current_relative_to_other_unlocked_percent": -2.2477617556121543,
+    "interpretation": "Consistent with reference unlocked throughput; not a matched measurement of this card gain."
+  }
+}

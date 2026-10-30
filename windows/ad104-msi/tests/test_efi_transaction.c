@@ -6,7 +6,7 @@
 #ifndef GU_STOCK_PROFILE_SS0
 #define GU_STOCK_PROFILE_SS0 0x23703005U
 #endif
-static UINT32 test_entry_ss0=0x23703005U,test_entry_ss1=1;
+static UINT32 test_entry_ss0=0x23703005U,test_entry_ss1=GU_COLD_SS1;
 #endif
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,7 +24,11 @@ static UINT32 test_entry_ss0=0x23703005U,test_entry_ss1=1;
 #include "../vendor/prep_610.h"
 #include "../vendor/vbios_610.h"
 #include "../profile.h"
+#ifdef GU_RTX4080S_MSI
+#include "rtx4080s_captured.h"
+#else
 #include "captured_config.h"
+#endif
 
 #ifndef GU_UEFI_PORT
 #error This integration test must execute the real UEFI compatibility path.
@@ -130,14 +134,18 @@ static VOID check_fwsec_image(void) {
 #ifdef GU_AD104_TRANSACTION
   struct gpu_unlock_fwsec fw;UINT32 sig_at;
   CHECK(!gpu_unlock_vbios_fwsec(prom,sizeof(prom),&fw));
-  CHECK(fw.image_off==0x45488 && fw.image_size==0x10300 && fw.dmem_size==0xd80);
+  CHECK(fw.image_off==GU_FWSEC_IMAGE_OFF && fw.image_size==GU_FWSEC_IMAGE_SIZE && fw.dmem_size==0xd80);
   CHECK(!gpu_unlock_fwsec_sig_offset(fw.sig_versions,1,384,&sig_at));
   UINT64 last_source=((UINT64)registers[(GSP+0x110)/4]<<8)|((UINT64)registers[(GSP+0x128)/4]<<40);
   UINT8 *image=dma_pointer(last_source-fw.data_off,fw.image_size);
   CHECK(!memcmp(gsp_dmem,image+fw.data_off,sizeof(gsp_dmem)));
   CHECK(!memcmp(gsp_dmem+fw.pkc_off,prom+fw.sig_off+sig_at,384));
-  UINT8 expected[0x10300];memcpy(expected,prom+fw.image_off,sizeof(expected));
+  UINT8 expected[GU_FWSEC_IMAGE_SIZE];memcpy(expected,prom+fw.image_off,sizeof(expected));
+#ifdef GU_RTX4080S_MSI
+  CHECK(!gpu_unlock_fwsec_patch_frts(expected,&fw,0x3ff600000ULL));
+#else
   CHECK(!gpu_unlock_fwsec_patch_frts(expected,&fw,0x2ff800000ULL));
+#endif
   memcpy(expected+fw.data_off+fw.pkc_off,prom+fw.sig_off+sig_at,384);
   CHECK(!memcmp(gsp_dmem,expected+fw.data_off,sizeof(gsp_dmem)));
 #else
@@ -157,6 +165,9 @@ static VOID check_booter_publication(void) {
   UINT64 delta=0;
 #ifdef GU_AD104_TRANSACTION
   delta=0x7fa00000ULL;
+#ifdef GU_RTX4080S_MSI
+  delta=0x17f800000ULL;
+#endif
 #endif
   CHECK(le64(meta+112)==0x275400000ULL+delta && le64(meta+136)==0x27ada0000ULL+delta);
   CHECK(le64(meta+144)==0x27fdf7000ULL+delta && le64(meta+152)==0x27fe00000ULL+delta);
@@ -322,6 +333,9 @@ static EFI_STATUS EFIAPI write_memory(EFI_PCI_IO_PROTOCOL *p,EFI_PCI_IO_PROTOCOL
       registers[0x1fa824/4]=0x27fe000;registers[0x1fa828/4]=0x27feff0;
 #ifdef GU_AD104_TRANSACTION
       registers[0x1fa824/4]=0x2ff8000;registers[0x1fa828/4]=0x2ff8ff0;
+#ifdef GU_RTX4080S_MSI
+      registers[0x1fa824/4]=0x3ff6000;registers[0x1fa828/4]=0x3ff6ff0;
+#endif
 #endif
     }
     if(fake.mode==FWSEC_ERROR_CODE)registers[0x1438/4]=0x10000;
@@ -390,14 +404,14 @@ static VOID setup(enum scenario mode) {
   pci.GetLocation=location;
   pci.Attributes=master_attributes;fake.pci_attributes=EFI_PCI_IO_ATTRIBUTE_IO|EFI_PCI_IO_ATTRIBUTE_MEMORY;
   memcpy(config,CapturedConfig,sizeof(config));
-  registers[0]=0x194000a1;registers[0x118128/4]=0x8b8f;registers[0x118234/4]=0x03ff;
+  registers[0]=GU_BOARD_CHIP;registers[0x118128/4]=0x8b8f;registers[0x118234/4]=0x03ff;
   registers[GSP/4+0x100/4]=0x10;registers[0x1fa824/4]=0x1ffffe00;
   registers[PLM/4]=0xffffff8f;registers[SS0/4]=0x46254040;registers[SS1/4]=3;
   registers[0x1183a4/4]=0x2800;registers[0x625f04/4]=1;registers[0x1fa7c8/4]=0x45cb8f;
 #ifdef GU_AD104_TRANSACTION
-  registers[SS0/4]=GU_STOCK_PROFILE_SS0;registers[SS1/4]=6;registers[0x1183a4/4]=0x2ffa;
+  registers[SS0/4]=GU_STOCK_PROFILE_SS0;registers[SS1/4]=6;registers[0x1183a4/4]=GU_DEVICE_MEMORY_SIZE;
 #endif
-  registers[0x1fa82c/4]=0x100000;registers[0x1fa830/4]=0x2ef9ff0;
+  registers[0x1fa82c/4]=0x100000;registers[0x1fa830/4]=GU_MMU_HI;
   registers[0x824148/4]=1;registers[0x8241e0/4]=1;
   registers[0x1fa7cc/4]=registers[0x1fa7c4/4]=0x4cb8f;
   registers[0x9a0148/4]=0xffffff0f;
@@ -459,11 +473,11 @@ int main(int argc,char **argv) {
   }
 #ifdef GU_ENTRY_LATCHED
   for(unsigned permutation=0;permutation<3;permutation++) {
-    test_entry_ss0=permutation==2?0x23603005U:permutation==1?0x23613005U:0x23703005U;test_entry_ss1=1;
+    test_entry_ss0=permutation==2?0x23603005U:permutation==1?0x23613005U:0x23703005U;test_entry_ss1=GU_COLD_SS1;
 #endif
   for(int mode=SUCCESS;mode<SCENARIO_COUNT;mode++) {
     setup((enum scenario)mode);UINT64 mask=0xffffffffffffULL;
-    struct pci_dev device={.vendor=0x10de,.device=0x2782,.dev={.dma_mask=&mask,.coherent_dma_mask=0xfffffffffULL},.pm_cap=0x60,.refs=1};
+    struct pci_dev device={.vendor=0x10de,.device=GU_DEVICE_ID,.dev={.dma_mask=&mask,.coherent_dma_mask=0xfffffffffULL},.pm_cap=0x60,.refs=1};
     struct gpu_unlock_610_shared shared={0};
     int result=gpu_unlock_610_load_shared(&device,&shared);CHECK(!result);
     result=gpu_unlock_610_unlock(&device,&shared);gpu_unlock_610_release_shared(&shared);
@@ -491,7 +505,7 @@ int main(int argc,char **argv) {
       if(mode==MAP_FAIL || mode==MAP_PARTIAL)CHECK(!Gu.started && !fake.pci_writes);
       if(mode==MARKER_MISSING || mode==HALT_MISSING || mode==WPR_CFG_CLOSED || mode==WPR_CLOSED || mode==FEAT_CLOSED) {
         CHECK(fake.sec2_starts==1 && !fake.flrs);
-        CHECK(registers[SS0/4]!=0x88888888 && registers[SS1/4]==1);
+        CHECK(registers[SS0/4]!=0x88888888 && registers[SS1/4]==GU_COLD_SS1);
       }
       if(mode==READOUT_UNCHANGED)CHECK(!fake.flrs);
       if(mode==FWSEC_NO_WPR || mode==FWSEC_ERROR_CODE)CHECK(fake.gsp_starts==1 && !fake.sec2_starts && !fake.flrs);

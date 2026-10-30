@@ -1,0 +1,57 @@
+Offline build output: C:\gpu-unlock-ada\build\rtx4080s-msi\candidate-20261030-203738-536
+test_efi_transaction.c
+port.c
+compat.c
+checks.c
+profile.c
+sha256.c
+unlock_610.c
+prep_610.c
+layout_610.c
+vbios_610.c
+gfw_eval.c
+Generating Code...
+test_guards.c
+port.c
+compat.c
+checks.c
+profile.c
+sha256.c
+unlock_610.c
+prep_610.c
+layout_610.c
+vbios_610.c
+gfw_eval.c
+Generating Code...
+test_release.c
+sha256.c
+format.c
+Generating Code...
+test_app_flow.c
+test_boot_io.c
+sha256.c
+format.c
+Generating Code...
+port.c
+compat.c
+checks.c
+profile.c
+sha256.c
+unlock_610.c
+prep_610.c
+layout_610.c
+vbios_610.c
+gfw_eval.c
+app.c
+boot_io.c
+format.c
+x870e_release.c
+cl : Command line warning D9025 : overriding '/O2' with '/Od'
+runtime.c
+transaction: 90 real core + compat + UEFI port scenarios passed; all PCI/MMIO/DMA/firmware execution simulated.
+guards: 17 admission cases PASS; all hardware operations simulated.
+ownership: X870E ownership: 32 scenarios, 634531 checks; captured graph/code, all effects simulated.
+app: app flow: 296 checks; 15 scenarios, all effects simulated.
+boot-io: boot I/O: 571 checks; 8 cases, real file bytes, all EFI services simulated.
+PE verified. Not hardware-qualified. No USB/ESP/boot variables modified.
+Candidate built offline: C:\gpu-unlock-ada\build\rtx4080s-msi\candidate-20261030-203738-536. Hardware execution and performance remain unvalidated.

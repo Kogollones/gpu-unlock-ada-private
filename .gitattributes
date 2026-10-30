@@ -42,3 +42,13 @@
 
 # Preserve exact native RTX 4070 evidence bytes across platforms.
 /docs/evidence/ada2786/* -text
+
+# Preserve the recorded Windows evidence byte-for-byte, including CRLF logs.
+/docs/evidence/rtx4080s-msi-windows-20261030/** -text whitespace=cr-at-eol,-blank-at-eof
+# This copied verifier's exact upstream/source hash is part of the build record.
+/windows/rtx4080s-msi/tools/EfiSignature.cs -text whitespace=cr-at-eol,-blank-at-eof
+/windows/ad104-msi/diagnostic/tests/test_tools.py -text whitespace=cr-at-eol,-blank-at-eof
+# The owner-specific binary backup is not part of upstream/package source exports.
+/firmware/private-windows export-ignore
+/firmware/private-windows/** export-ignore
+*.zip binary

@@ -1,0 +1,16 @@
+﻿{
+    "profile":  "rtx4080s-msi-x870e",
+    "unsigned_sha256":  "a5a76abd8dd2154405d8f9e4cba3de51e9540e0f06a94fb32c5417a671d17bae",
+    "signed_sha256":  "cb33d814ad158451f207c3ce846b8a584701adf6f635c547700b46adcfc9bea2",
+    "signer_thumbprint":  "DD2AB51A1EEB0694D93D71281B74BB2F788FDB3E",
+    "image_digest_sha256":  "b37f6393c721cd3a9ce7ddf4d228ad7a3d693e8396d892edf7af6dc65735a453",
+    "cryptographic_signature_verified":  true,
+    "executable_bytes_unchanged":  true,
+    "tamper_rejected":  true,
+    "wrong_signer_rejected":  true,
+    "firmware_trust_verified":  false,
+    "hardware_tested":  false,
+    "private_key_exported":  false,
+    "boot_settings_changed":  false,
+    "utc":  "2026-10-30T20:01:23.5241333Z"
+}

@@ -31,7 +31,7 @@ VOID GuBootSilence(VOID){CHECK(Calls==6);Silenced=TRUE;}
 EFI_STATUS GuMsiRelease(VOID){CHECK(Silenced);Releases++;Mutated=TRUE;Gu.owned=TRUE;return Tick(7);}
 BOOLEAN GuMsiReleased(VOID){return Mutated&&Gu.owned;}
 BOOLEAN GuAd104ColdEntry(VOID){return TRUE;}
-int gpu_unlock_610_load_shared(struct pci_dev *d,struct gpu_unlock_610_shared *shared){CHECK(d->device==0x2782&&Gu.owned&&Gu.armed&&Gu.display_ok);(void)shared;return Tick(8)==EFI_SUCCESS?0:-EIO;}
+int gpu_unlock_610_load_shared(struct pci_dev *d,struct gpu_unlock_610_shared *shared){CHECK(d->device==GU_DEVICE_ID&&Gu.owned&&Gu.armed&&Gu.display_ok);(void)shared;return Tick(8)==EFI_SUCCESS?0:-EIO;}
 int gpu_unlock_610_unlock(struct pci_dev *d,const struct gpu_unlock_610_shared *s){(void)d;(void)s;Transactions++;Gu.started=TRUE;Gu.quiesced=TRUE;Gu.flrs=1;return Tick(9)==EFI_SUCCESS?0:-EIO;}
 void gpu_unlock_610_release_shared(struct gpu_unlock_610_shared *s){(void)s;}
 BOOLEAN GuSafeToReturn(VOID){return TRUE;}
@@ -49,7 +49,13 @@ int main(void){
     Bs.LocateHandleBuffer=Locate;Bs.HandleProtocol=Handle;Bs.FreePool=Free;Rs.GetVariable=GetVariable;St.BootServices=&Bs;St.RuntimeServices=&Rs;Io.Pci.Read=Read;Io.GetLocation=Location;
     if(!setjmp(Escape))(VOID)UefiMain((EFI_HANDLE)1,&St);
     if(Case==0)CHECK(WindowsCalls==1&&!Mutated);
-    else if(Case==99)CHECK(!Calls&&!WindowsCalls);
+    else if(Case==99){
+#ifdef GU_RTX4080S_MSI
+      CHECK(Calls==10&&WindowsCalls==1&&Transactions==1);
+#else
+      CHECK(!Calls&&!WindowsCalls);
+#endif
+    }
     else if(Case<=12)CHECK(!WindowsCalls);
     CHECK(Releases<=1&&Transactions<=1&&Finishes<=1&&WindowsCalls<=1);
     printf("app flow case %u PASS\n",Case);

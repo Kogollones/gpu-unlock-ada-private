@@ -1,4 +1,7 @@
 #include "compat/compat.h"
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
 GU_ASSET GuAssets[5];
 void *devres_open_group(struct device *D,void *Id,int Flags) {
   (void)Flags;if(Id || D->scope)return NULL;D->scope=true;return &D->scope;
@@ -43,7 +46,11 @@ void dma_free_coherent(struct device *D,size_t N,void *P,dma_addr_t A) {
 int dma_set_mask(struct device *D,u64 Mask) {if(!D->dma_mask)return -EINVAL;*D->dma_mask=Mask;return 0;}
 int dma_set_coherent_mask(struct device *D,u64 Mask) {D->coherent_dma_mask=Mask;return 0;}
 void dma_wmb(void) {
+#ifdef _MSC_VER
+  _mm_mfence();
+#else
   __atomic_thread_fence(__ATOMIC_SEQ_CST);
+#endif
   if(Gu.pci->Flush && EFI_ERROR(Gu.pci->Flush(Gu.pci)))Gu.fault=TRUE;
 }
 void *kzalloc(size_t N,int Flags) {(void)Flags;return GuAlloc(N);}

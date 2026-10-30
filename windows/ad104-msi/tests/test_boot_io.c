@@ -1,9 +1,16 @@
 #define GU_HOST_TEST_PROFILE 1
 /* SPDX-License-Identifier: GPL-2.0-only */
-#include "../boot_io.c"
 #include <stdio.h>
 #include <stdlib.h>
 #include <wchar.h>
+#undef EPROTO
+#undef EBADMSG
+#undef EOVERFLOW
+#undef EOPNOTSUPP
+#undef ETIMEDOUT
+#undef EALREADY
+#undef NULL
+#include "../boot_io.c"
 enum CASE {GOOD,NON_USB,WRONG_PARTITION,BAD_WINDOWS_HASH,BAD_FILE_SIZE,SHORT_READ,WRONG_LOADED_DEVICE,LOG_WRITE_FAIL,IO_CASES};
 static enum CASE Case;static unsigned Checks,Loads,Starts,FileWrites;
 #define CHECK(x) do{Checks++;if(!(x)){fprintf(stderr,"IO FAIL case=%d line=%d %s\n",Case,__LINE__,#x);exit(1);}}while(0)
@@ -33,15 +40,15 @@ static EFI_STATUS EFIAPI Read(EFI_FILE_PROTOCOL *p,UINTN *n,VOID *out){
 }
 static EFI_STATUS EFIAPI Open(EFI_FILE_PROTOCOL *p,EFI_FILE_PROTOCOL **out,CHAR16 *name,UINT64 mode,UINT64 attrs){
   *out=NULL;
-  if(p==&OwnRoot&&mode&EFI_FILE_MODE_CREATE){CHECK(!wcscmp(name,L"\\AD104-UNLOCK")&&(attrs&EFI_FILE_DIRECTORY));*out=&Dir;return EFI_SUCCESS;}
+  if(p==&OwnRoot&&mode&EFI_FILE_MODE_CREATE){CHECK(!wcscmp(name,GU_LOG_DIRECTORY)&&(attrs&EFI_FILE_DIRECTORY));*out=&Dir;return EFI_SUCCESS;}
   if(p==&Dir) {
     if(mode==EFI_FILE_MODE_READ)return EFI_NOT_FOUND;
     CHECK(mode==(EFI_FILE_MODE_READ|EFI_FILE_MODE_WRITE|EFI_FILE_MODE_CREATE)&&!attrs);*out=&LogFile;return EFI_SUCCESS;
   }
   CHECK(mode==EFI_FILE_MODE_READ&&!attrs);Position=0;
-  if(p==&WinRoot){CHECK(!wcscmp(name,WindowsName));ReadBytes=WinBytes;ReadSize=3086728;}
+  if(p==&WinRoot){CHECK(!wcscmp(name,WindowsName));ReadBytes=WinBytes;ReadSize=GU_WINDOWS_IMAGE_BYTES;}
   else {
-    CHECK(p==&OwnRoot);static const CHAR16 *names[]={L"\\AD104-ASSETS\\booter_load_ad102.bin",L"\\AD104-ASSETS\\v67-ad102-610.43.03-four-plm.bin",L"\\AD104-ASSETS\\gsp_ga10x.bin",L"\\AD104-ASSETS\\gsp_boot_ad102.bin",L"\\AD104-ASSETS\\gsp_boot_desc_ad102.bin"};
+    CHECK(p==&OwnRoot);static const CHAR16 *names[]={GU_ASSET_DIRECTORY L"booter_load_ad102.bin",GU_ASSET_DIRECTORY L"v67-ad102-610.43.03-four-plm.bin",GU_ASSET_DIRECTORY L"gsp_ga10x.bin",GU_ASSET_DIRECTORY L"gsp_boot_ad102.bin",GU_ASSET_DIRECTORY L"gsp_boot_desc_ad102.bin"};
     static const UINTN sizes[]={57672,64000,84277400,36864,84};UINTN i;
     for(i=0;i<5;i++)if(!wcscmp(name,names[i]))break;CHECK(i<5);ReadBytes=AssetBytes[i];ReadSize=sizes[i];
   }
@@ -59,7 +66,7 @@ static EFI_STATUS EFIAPI Locate(EFI_LOCATE_SEARCH_TYPE type,EFI_GUID *g,VOID *ke
   CHECK(type==ByProtocol&&!memcmp(g,&FsGuid,16)&&!key);*n=2;*out=malloc(2*sizeof(**out));CHECK(*out);(*out)[0]=(EFI_HANDLE)2;(*out)[1]=(EFI_HANDLE)3;return EFI_SUCCESS;
 }
 static EFI_STATUS EFIAPI Load(BOOLEAN policy,EFI_HANDLE parent,EFI_DEVICE_PATH_PROTOCOL *path,VOID *bytes,UINTN n,EFI_HANDLE *out){
-  CHECK(!policy&&parent==(EFI_HANDLE)1&&n==3086728&&!memcmp(bytes,WinBytes,n));Loads++;
+  CHECK(!policy&&parent==(EFI_HANDLE)1&&n==GU_WINDOWS_IMAGE_BYTES&&!memcmp(bytes,WinBytes,n));Loads++;
   CHECK(!memcmp(path,WinPath,42));UINT8 *p=(UINT8 *)path+42;
   CHECK(p[0]==4&&p[1]==4&&!memcmp(p+4,WindowsName,sizeof(WindowsName)));
   *out=(EFI_HANDLE)10;return EFI_SUCCESS;
@@ -81,13 +88,13 @@ static void Setup(void) {
   LogFile.Flush=Flush;LogFile.Write=Write;Reader.GetInfo=Info;Reader.Read=Read;
   UsbPath[0]=Case==NON_USB?1:3;
   memset(WinPath,0,sizeof(WinPath));HARDDRIVE_DEVICE_PATH *hd=(VOID *)WinPath;
-  hd->Header.Type=4;hd->Header.SubType=1;hd->Header.Length[0]=42;hd->PartitionNumber=2;hd->PartitionStart=1085440;hd->PartitionSize=202752;
+  hd->Header.Type=4;hd->Header.SubType=1;hd->Header.Length[0]=42;hd->PartitionNumber=GU_WINDOWS_PARTITION_NUMBER;hd->PartitionStart=GU_WINDOWS_PARTITION_START;hd->PartitionSize=GU_WINDOWS_PARTITION_SECTORS;
   hd->MBRType=hd->SignatureType=2;memcpy(hd->Signature,&WindowsPartition,16);if(Case==WRONG_PARTITION)hd->Signature[0]^=1;
   WinPath[42]=127;WinPath[43]=255;WinPath[44]=4;
 }
 static UINT8 *File(const char *path,UINTN expected){FILE *f=fopen(path,"rb");CHECK(f);UINT8 *p=malloc(expected);CHECK(p&&fread(p,1,expected,f)==expected&&fgetc(f)==EOF);fclose(f);return p;}
 int main(int argc,char **argv){
-  CHECK(argc==3);WinBytes=File(argv[1],3086728);
+  CHECK(argc==3);WinBytes=File(argv[1],GU_WINDOWS_IMAGE_BYTES);
   static const char *names[]={"booter_load_ad102.bin","v67-ad102-610.43.03-four-plm.bin","gsp_ga10x.bin","gsp_boot_ad102.bin","gsp_boot_desc_ad102.bin"};
   static const UINTN sizes[]={57672,64000,84277400,36864,84};
   for(UINTN i=0;i<5;i++){char p[4096];snprintf(p,sizeof(p),"%s/%s",argv[2],names[i]);AssetBytes[i]=File(p,sizes[i]);}

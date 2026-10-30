@@ -35,11 +35,21 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image,EFI_SYSTEM_TABLE *t) {
   if(!image||!t||!t->BootServices||!t->RuntimeServices||!t->RuntimeServices->GetVariable)return EFI_INVALID_PARAMETER;
   UINT8 secure=1;UINTN n=1;UINT32 attrs=0;
   EFI_STATUS s=t->RuntimeServices->GetVariable(L"SecureBoot",&GlobalGuid,&attrs,&n,&secure);
+#ifdef GU_RTX4080S_MSI
+  /* The firmware authenticates this image before entry under Secure Boot.
+   * Do not disable policy or enroll keys here; record its observed state. */
+  if(s!=EFI_SUCCESS||n!=1||secure>1)return EFI_SECURITY_VIOLATION;
+#else
   if(s!=EFI_SUCCESS||n!=1||secure)return EFI_SECURITY_VIOLATION;
+#endif
   s=GuBootOpen(image,t);if(s!=EFI_SUCCESS)return s;
   const char *stage="discover";BOOLEAN unlock=FALSE;
   s=Discover(image,t);if(s!=EFI_SUCCESS)goto failed;
+#ifdef GU_RTX4080S_MSI
+  GuLog("MSI RTX4080S X870E experimental: hardware UNVALIDATED; manual one-shot; SecureBoot=%u\n",secure);
+#else
   GuLog("AD104 MSI EXPERIMENTAL v0.5.4: hardware unvalidated; USB manual one-shot; bounded USB enumeration additions/removals; GPU ownership pinned\n");
+#endif
   stage="assets";s=GuBootLoadAssets();if(s!=EFI_SUCCESS||Gu.fault)goto failed;
   stage="read-only-cold-profile";s=GuAd104Prepare();if(s!=EFI_SUCCESS||Gu.fault)goto failed;
   stage="stage-windows-image";s=GuBootLoadWindows();if(s!=EFI_SUCCESS||Gu.fault)goto failed;
@@ -58,7 +68,7 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image,EFI_SYSTEM_TABLE *t) {
   if(!GuMsiReleased()||!GuAd104ColdEntry()){s=EFI_NOT_READY;goto failed;}
   Gu.display_check=GuMsiReleased;Gu.display_ok=TRUE;Gu.armed=TRUE;
   UINT64 mask=0xffffffffffffULL;
-  struct pci_dev dev={.vendor=0x10de,.device=0x2782,.dev={.dma_mask=&mask,.coherent_dma_mask=0xfffffffffULL},
+  struct pci_dev dev={.vendor=0x10de,.device=GU_DEVICE_ID,.dev={.dma_mask=&mask,.coherent_dma_mask=0xfffffffffULL},
     .current_state=PCI_D0,.pm_cap=Gu.pm_cap,.refs=1};
   struct gpu_unlock_610_shared shared={0};
   stage="shared-assets";int result=gpu_unlock_610_load_shared(&dev,&shared);

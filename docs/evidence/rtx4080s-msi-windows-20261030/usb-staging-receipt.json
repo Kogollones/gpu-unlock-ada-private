@@ -1,0 +1,16 @@
+{
+  "utc": "2026-10-30T20:09:32.8437727Z",
+  "drive": "E:\\",
+  "disk_number": 2,
+  "original_boot_sha256": "bab2b09b6e342520ddcc6e2104161d19e6e73a082f802ed46e3f5f4b3ec1d239",
+  "candidate_sha256": "cb33d814ad158451f207c3ce846b8a584701adf6f635c547700b46adcfc9bea2",
+  "candidate_path": "E:\\EFI\\GPUUnlock\\RTX4080S-EXPERIMENTAL.EFI",
+  "boot_fallback_replaced": true,
+  "backup": "C:\\gpu-unlock-ada\\build\\rtx4080s-msi\\candidate-20261030-195526-925\\usb-backup-20261030-200925",
+  "assets_readback_verified": true,
+  "image_readback_verified": true,
+  "firmware_settings_changed": false,
+  "internal_esp_changed": false,
+  "gpu_executed": false,
+  "reboot_performed": false
+}

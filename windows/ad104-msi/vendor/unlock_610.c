@@ -76,7 +76,7 @@ static const struct gpu_unlock_assets *unlock_assets(const struct pci_dev *pdev)
 
 	return (pdev->device == GU_AD102_RTX_4090 ||
 		pdev->device == GU_AD103_RTX_4070_TI_SUPER ||
-		pdev->device == 0x2782u) ? &ad102 : &ga102;
+		pdev->device == GU_DEVICE_ID) ? &ad102 : &ga102;
 }
 
 /* The two falcons this module ever touches. SEC2 is the secure boot engine
@@ -101,7 +101,7 @@ struct unlock_transaction_page {
 
 struct unlock_transaction_work {
 	struct pci_dev *pdev;
-	void __iomem *bar;
+	u8 __iomem *bar;
 	resource_size_t bar_len;
 	u16 original_cmd;
 	bool cmd_valid;
@@ -327,7 +327,7 @@ static bool is_ad102(const struct unlock_transaction_work *work)
 	 * behavior on 0x2705 still requires an exact-card canary. */
 	return work->pdev->device == GU_AD102_RTX_4090 ||
 	       work->pdev->device == GU_AD103_RTX_4070_TI_SUPER ||
-	       work->pdev->device == 0x2782u;
+	       work->pdev->device == GU_DEVICE_ID;
 }
 
 static const struct {
@@ -886,7 +886,7 @@ static int unlock_transaction_assets(struct unlock_transaction_work *work)
 	if (ret)
 		return GU_RESULT(ret);
 	ret = gpu_unlock_boot_desc_parse(desc->data, desc->size,
-					work->boot_fw->size, &work->boot_desc);
+					(u32)work->boot_fw->size, &work->boot_desc);
 	dev_info(&work->pdev->dev, "asset geometry: image=%llu signature=%llu boot=%u code=%#x data=%#x manifest=%#x parse=%d\n",
 		(unsigned long long)work->image_span.size, (unsigned long long)work->sig_span.size,
 		work->boot_desc.image_size, work->boot_desc.code_offset, work->boot_desc.data_offset,
@@ -994,7 +994,9 @@ static int unlock_transaction_radix(struct unlock_transaction_work *work)
 	u32 i, level, first = 0;
 	int ret = 0;
 
-	work->page_count = r->table_pages + r->pages[3];
+	if (r->table_pages > 0xffffffffu || r->pages[3] > 0xffffffffu-r->table_pages)
+		return GU_RESULT(-EOVERFLOW);
+	work->page_count = (u32)(r->table_pages + r->pages[3]);
 	work->pages = kvcalloc(work->page_count, sizeof(*work->pages), GFP_KERNEL);
 	addresses = kvcalloc(work->page_count, sizeof(*addresses), GFP_KERNEL);
 	if (!work->pages || !addresses) {
@@ -1021,11 +1023,11 @@ static int unlock_transaction_radix(struct unlock_transaction_work *work)
 		}
 	}
 	for (level = 0; level < 3; level++) {
-		u32 child = first + r->pages[level];
+		u32 child = first + (u32)r->pages[level];
 
 		for (i = 0; i < r->pages[level]; i++) {
 			u32 at = i * (GU_RADIX_PAGE / 8);
-			u32 n = min_t(u64, GU_RADIX_PAGE / 8, r->pages[level + 1] - at);
+			u32 n = (u32)min_t(u64, GU_RADIX_PAGE / 8, r->pages[level + 1] - at);
 
 			ret = gpu_unlock_radix_page(work->pages[first + i].cpu,
 						    addresses + child + at, n);
@@ -1295,7 +1297,7 @@ static int unlock_transaction_gfw(struct unlock_transaction_work *work)
 				return GU_RESULT(-EBUSY);
 			}
             if (!Gu.profile_verified || !GuEntrySelectorsMatch(ss0,ss1) ||
-                inaccessible(ss0) || ss0==GU_SS0_UNLOCK || ss1!=1 ||
+                inaccessible(ss0) || ss0==GU_SS0_UNLOCK || ss1!=GU_COLD_SS1 ||
                 work->plm_entry!=0xffffff8f || sample.plm!=0x8b8f ||
                 sample.boot!=0x3ff || sample.cpuctl!=0x10 || wpr_hi)
                 return GU_RESULT(-EIO);
@@ -1709,7 +1711,7 @@ static int unlock_transaction_reset(struct unlock_transaction_work *work)
 
 int gpu_unlock_610_load_shared(struct pci_dev *pdev, struct gpu_unlock_610_shared *shared)
 {
-	if (!pdev || pdev->vendor!=0x10de || pdev->device!=0x2782 || !GuAd104AssetsValid()) return -ENODEV;
+	if (!pdev || pdev->vendor!=0x10de || pdev->device!=GU_DEVICE_ID || !GuAd104AssetsValid()) return -ENODEV;
 	return request_scoped(&pdev->dev, &shared->gsp, unlock_assets(pdev)->gsp);
 }
 
@@ -1727,7 +1729,7 @@ int gpu_unlock_610_unlock(struct pci_dev *pdev, const struct gpu_unlock_610_shar
     /* No EFI application calls this library yet. A future ownership adapter
      * must prove exclusive release of GOP, console and all active consumers. */
     if (Gu.transaction_attempted) return -EALREADY;
-    if (!pdev || pdev->vendor!=0x10de || pdev->device!=0x2782 ||
+    if (!pdev || pdev->vendor!=0x10de || pdev->device!=GU_DEVICE_ID ||
         !shared || shared->gsp!=&GuAssets[2].firmware || !GuAd104AssetsValid() ||
         !Gu.prom_verified || !Gu.profile_verified || !Gu.owned || !Gu.armed ||
         !Gu.display_ok || !Gu.display_check || !Gu.display_check() || Gu.fault ||
