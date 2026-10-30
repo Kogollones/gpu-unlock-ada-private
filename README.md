@@ -1,4 +1,4 @@
-# MSI RTX 4080 SUPER / X870E — private Windows port
+# MSI RTX 4080 SUPER / X870E — Windows port
 
 **October 30, 2026: one successful manual USB unlock and Windows handoff.**
 The MSI `10de:2702 / 1462:5118` retained full-rate readbacks after the GPU reset,
